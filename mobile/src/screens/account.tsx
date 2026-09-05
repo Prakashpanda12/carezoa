@@ -87,17 +87,48 @@ export function ProfileSettings() {
   });
 
   const doSignOut = () => {
-    Alert.alert(t("account.signOut"), "", [
-      { text: t("common.cancel"), style: "cancel" },
-      {
-        text: t("account.signOut"),
-        style: "destructive",
-        onPress: async () => {
-          await signOut();
-          router.replace("/(auth)/login");
+    console.log("[SIGNOUT] Sign out button pressed");
+    
+    // Use Alert.alert with proper configuration
+    Alert.alert(
+      t("account.signOut"),
+      "Are you sure you want to sign out?",
+      [
+        { 
+          text: t("common.cancel"), 
+          style: "cancel",
+          onPress: () => console.log("[SIGNOUT] Cancelled")
         },
-      },
-    ]);
+        {
+          text: t("account.signOut"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              console.log("[SIGNOUT] Confirming sign out...");
+              
+              // Clear auth state
+              await signOut();
+              console.log("[SIGNOUT] Auth state cleared");
+              
+              // Small delay to ensure state is updated
+              await new Promise(resolve => setTimeout(resolve, 100));
+              
+              console.log("[SIGNOUT] Navigating to login...");
+              
+              // Clear navigation stack and go to login
+              router.dismissAll();
+              router.replace("/(auth)/login");
+              
+              console.log("[SIGNOUT] Navigation complete");
+            } catch (error) {
+              console.error("[SIGNOUT] Error during sign out:", error);
+              Alert.alert("Error", "Failed to sign out. Please try again.");
+            }
+          },
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   // BUG-L05 fix: dynamic version from app.config
