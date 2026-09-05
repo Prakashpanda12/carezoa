@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CAREZOA Backend — Architecture & ER Diagram</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #12161b;
+    --panel-2: #171c22;
+    --border: #232a32;
+    --text: #dbe2e8;
+    --muted: #8b98a5;
+    --accent: #4fd1c5;
+    --accent-2: #7aa2f7;
+    --code-bg: #0e1216;
+    --maxw: 1100px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.65;
+    scroll-behavior: smooth;
+  }
+  .layout {
+    display: grid;
+    grid-template-columns: 280px minmax(0, 1fr);
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  nav.sidebar {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 28px 18px 40px 24px;
+    border-right: 1px solid var(--border);
+    background: var(--panel);
+  }
+  nav.sidebar .brand {
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: var(--accent);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+  }
+  nav.sidebar .sub {
+    color: var(--muted);
+    font-size: 12px;
+    margin-bottom: 22px;
+  }
+  nav.sidebar a {
+    display: block;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 13.5px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    margin-bottom: 2px;
+    transition: background 0.15s, color 0.15s;
+  }
+  nav.sidebar a:hover { background: var(--panel-2); color: var(--text); }
+  nav.sidebar a.h2 { font-weight: 600; color: var(--text); margin-top: 10px; }
+  nav.sidebar a.h3 { padding-left: 22px; font-size: 12.5px; }
+  main {
+    padding: 48px clamp(20px, 5vw, 72px) 120px;
+    max-width: var(--maxw);
+    min-width: 0;
+  }
+  main > h1:first-child { margin-top: 0; }
+  h1, h2, h3, h4 { font-weight: 700; line-height: 1.3; scroll-margin-top: 20px; }
+  h1 {
+    font-size: 32px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+    margin-bottom: 8px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  h1 + p { color: var(--muted); font-size: 15px; margin-top: 4px; }
+  h2 {
+    font-size: 23px;
+    margin-top: 52px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+    color: #f1f5f9;
+  }
+  h2:first-of-type { border-top: none; margin-top: 32px; }
+  h3 { font-size: 18px; margin-top: 32px; color: #e2e8f0; }
+  h4 { font-size: 15px; margin-top: 24px; color: var(--accent-2); }
+  a { color: var(--accent-2); }
+  a.header-anchor { opacity: 0; margin-left: 6px; font-size: 0.8em; text-decoration: none; }
+  h1:hover a.header-anchor, h2:hover a.header-anchor, h3:hover a.header-anchor, h4:hover a.header-anchor { opacity: 0.6; }
+  p, li { color: var(--text); font-size: 15px; }
+  code {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 13px;
+    font-family: "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    color: #ffcb6b;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    overflow-x: auto;
+  }
+  pre code { background: none; border: none; padding: 0; color: #cdd6e0; }
+  blockquote {
+    border-left: 3px solid var(--accent);
+    margin: 20px 0;
+    padding: 4px 18px;
+    background: var(--panel);
+    border-radius: 0 8px 8px 0;
+    color: var(--muted);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 13.5px;
+    display: block;
+    overflow-x: auto;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 9px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--panel-2);
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  tr:nth-child(even) td { background: rgba(255,255,255,0.015); }
+  hr { border: none; border-top: 1px solid var(--border); margin: 44px 0; }
+  .mermaid-wrap {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 24px 0;
+    overflow-x: auto;
+    text-align: center;
+  }
+  .mermaid-wrap svg { max-width: 100%; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #2a3138; border-radius: 6px; }
+  .topbar {
+    display: none;
+  }
+  #toc-toggle { display: none; }
+  @media (max-width: 900px) {
+    .layout { grid-template-columns: 1fr; }
+    nav.sidebar {
+      position: relative;
+      height: auto;
+      max-height: 60vh;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 20px;
+    background: rgba(79, 209, 197, 0.12);
+    color: var(--accent);
+    border: 1px solid rgba(79, 209, 197, 0.3);
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .back-to-top {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--accent);
+    color: #06201d;
+    border: none;
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .back-to-top.show { display: flex; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="sidebar" id="sidebar">
+    <div class="brand">CAREZOA Backend</div>
+    <div class="sub">Architecture &amp; ER Diagram</div>
+    <div id="toc"></div>
+  </nav>
+  <main id="content">
+<h1 id="carezoa-backend-%E2%80%94-architecture%2C-data-model-%26-er-diagram" tabindex="-1"><a class="header-anchor" href="#carezoa-backend-%E2%80%94-architecture%2C-data-model-%26-er-diagram">CAREZOA Backend — Architecture, Data Model &amp; ER Diagram</a></h1>
+<p>This document is the single place to understand <strong>everything inside
+<code>carezoa-backend/</code></strong>: what the service does, how it’s laid out, every
+database table and how they relate, the booking lifecycle, and the
+non-negotiable business rules baked into the code. Pair it with
+<a href="./README.md"><code>README.md</code></a> (setup/run commands) and the top-level
+<a href="../API.md"><code>../API.md</code></a> (HTTP contract shared with the mobile app).</p>
+<hr>
+<h2 id="1.-what-this-service-is" tabindex="-1"><a class="header-anchor" href="#1.-what-this-service-is">1. What this service is</a></h2>
+<p><code>carezoa-backend</code> is the <strong>production-grade FastAPI implementation</strong> of the
+CAREZOA home-healthcare marketplace API — the same domain the Next.js
+<code>/api/v1</code> mock (repo root) simulates for local frontend development, but with
+real persistence, a real state machine, RBAC, audit logging, and background
+workers. It is designed to eventually be the API the <code>mobile/</code> Expo app talks
+to in staging/production.</p>
+<p><strong>Stack:</strong> Python 3.12 · FastAPI · SQLAlchemy 2.0 (async) · PostgreSQL ·
+Alembic migrations · Redis · Celery (worker + beat) · MinIO/S3-compatible
+object storage · structlog + OpenTelemetry.</p>
+<p><strong>Core domain:</strong> patients book verified home-care providers (nurses,
+attendants, physiotherapists) for services delivered at home; a visit moves
+through a strict lifecycle from booking to payment to arrival to completion;
+payments, payouts, chat, family access, care plans, incidents and support are
+all modeled explicitly.</p>
+<hr>
+<h2 id="2.-repository-layout" tabindex="-1"><a class="header-anchor" href="#2.-repository-layout">2. Repository layout</a></h2>
+<pre><code>carezoa-backend/
+├── app/
+│   ├── main.py                  # FastAPI app factory: exception handlers, router mounting, /health
+│   ├── core/
+│   │   ├── config.py             # Settings (env-driven) — DB/Redis URLs, JWT, OTP, payment/telephony/maps/S3 config
+│   │   ├── security.py           # Password hashing, JWT issue/decode, OTP hashing, webhook signature verify, Role enum
+│   │   ├── exceptions.py         # DomainError hierarchy → HTTP status mapping (404/403/401/409/429)
+│   │   ├── logging.py            # structlog configuration
+│   │   └── rate_limit.py         # In-process sliding-window limiter (swap for Redis in prod)
+│   ├── db/
+│   │   ├── base.py                # Declarative Base, naming convention, TimestampMixin (created_at/updated_at)
+│   │   ├── session.py             # Async engine + session factory, get_session() FastAPI dependency
+│   │   └── migrations/            # Alembic env + versions (0001_initial = full schema baseline)
+│   ├── models/                    # SQLAlchemy ORM models — the source of truth for the schema (see §4)
+│   │   ├── user.py, patient.py, catalog.py, provider.py, booking.py,
+│   │   │   payment.py, communication.py, support.py, care_plan.py
+│   ├── schemas/                   # Pydantic request/response models (per domain, mirrors routers/)
+│   ├── state_machines/
+│   │   └── booking_state_machine.py   # PURE stdlib visit lifecycle FSM — single source of truth (see §5)
+│   ├── services/                  # Business logic — the only layer allowed to orchestrate repos + state machine
+│   │   ├── booking_service.py        # ONLY module allowed to call booking_state_machine
+│   │   ├── matching_service.py       # Pure weighted provider ranking (gates + scoring, price never dominant)
+│   │   ├── anti_bypass_service.py    # Pure regex scanner: flags + scrubs contact/off-platform-payment patterns
+│   │   ├── communication_service.py  # Chat send/list orchestration (calls anti_bypass_service)
+│   │   ├── payment_service.py        # Payment intent creation + webhook handling → booking events
+│   │   ├── notification_service.py   # OTP dispatch via notification adapters
+│   │   └── verification_service.py   # Provider credential upload/review workflow
+│   ├── repositories/               # Pure data-access (no business logic), one per bounded context
+│   │   ├── identity_repository.py     # users, patient_profiles, family_members, OTP challenges
+│   │   ├── provider_repository.py     # services, providers, offerings, availability, credentials
+│   │   ├── booking_repository.py      # bookings, service_reports, reviews
+│   │   └── engagement_repository.py   # comms, payments, payouts, tickets, incidents, care packages, audit_logs
+│   ├── integrations/                # Adapters to the outside world (interchangeable via Protocol)
+│   │   ├── payment_gateway.py          # PaymentGateway protocol + SandboxGateway (HMAC-signed webhooks)
+│   │   ├── masked_telephony.py         # Relay-number-only calling (never real numbers)
+│   │   ├── notifications.py            # SMS/WhatsApp/push sender protocol + LoggingSender (sandbox)
+│   │   ├── maps.py                     # MapsAdapter protocol + HaversineAdapter (distance calc)
+│   │   └── storage.py                  # S3-compatible presigned URL helper (no raw creds ever returned)
+│   ├── api/v1/
+│   │   ├── deps.py                  # get_current_user, require_role(), require_admin_mfa, pagination
+│   │   └── routers/                 # One router per resource — thin, delegates to services/repositories
+│   ├── workers/
+│   │   └── celery_app.py            # Celery app + scheduled tasks (payout batch, notif dispatch, reminders, recurrence)
+│   └── tests/
+│       ├── unit/                    # Pure-logic tests (state machine, matching, anti-bypass) — no DB
+│       └── integration/             # Auth/RBAC + payment webhook tests (DB-backed)
+├── scripts/seed.py                 # Seeds 10 nurses, 10 patients, bookings in every lifecycle state
+├── alembic.ini
+├── docker-compose.yml              # db (Postgres) + redis + minio + api + worker + worker-beat
+├── Dockerfile
+├── pyproject.toml
+└── .env.example
+</code></pre>
+<h3 id="layering-rule-(strict)" tabindex="-1"><a class="header-anchor" href="#layering-rule-(strict)">Layering rule (strict)</a></h3>
+<pre><code>router  →  service  →  repository  →  ORM model  →  PostgreSQL
+             │
+             └── may call the pure state machine / matching / anti-bypass modules
+</code></pre>
+<ul>
+<li><strong>Routers</strong> parse/validate HTTP input (Pydantic schemas), call one service
+function, and shape the HTTP response. They contain no business rules.</li>
+<li><strong>Services</strong> own business rules and transactions; they are the only layer
+allowed to call <code>booking_state_machine</code>, <code>matching_service</code>, and
+<code>anti_bypass_service</code>.</li>
+<li><strong>Repositories</strong> are dumb data-access — no branching business logic, easy to
+swap/mock in tests.</li>
+<li><strong>State machine / matching / anti-bypass</strong> are pure stdlib modules (no
+FastAPI/SQLAlchemy imports) so their logic is unit-testable in total
+isolation from the database.</li>
+</ul>
+<hr>
+<h2 id="3.-domain-%E2%86%92-code-map" tabindex="-1"><a class="header-anchor" href="#3.-domain-%E2%86%92-code-map">3. Domain → code map</a></h2>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Router</th>
+<th>Service</th>
+<th>Repository</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Auth (OTP → JWT access+refresh)</td>
+<td><code>auth.py</code></td>
+<td><code>notification_service.py</code></td>
+<td><code>identity_repository.py</code></td>
+</tr>
+<tr>
+<td>Patient profile</td>
+<td><code>patients.py</code></td>
+<td>—</td>
+<td><code>identity_repository.py</code></td>
+</tr>
+<tr>
+<td>Provider directory</td>
+<td><code>providers.py</code></td>
+<td>—</td>
+<td><code>provider_repository.py</code></td>
+</tr>
+<tr>
+<td>Credential verification</td>
+<td><code>verification.py</code></td>
+<td><code>verification_service.py</code></td>
+<td><code>provider_repository.py</code></td>
+</tr>
+<tr>
+<td>Service catalogue</td>
+<td><code>services_catalog.py</code></td>
+<td>—</td>
+<td><code>provider_repository.py</code></td>
+</tr>
+<tr>
+<td>Provider availability</td>
+<td><code>availability.py</code></td>
+<td>—</td>
+<td><code>provider_repository.py</code></td>
+</tr>
+<tr>
+<td>Search &amp; matching</td>
+<td><code>search.py</code></td>
+<td><code>matching_service.py</code> (pure)</td>
+<td><code>provider_repository.py</code></td>
+</tr>
+<tr>
+<td>Booking engine &amp; visit lifecycle</td>
+<td><code>bookings.py</code></td>
+<td><code>booking_service.py</code> → <code>state_machines/booking_state_machine.py</code></td>
+<td><code>booking_repository.py</code></td>
+</tr>
+<tr>
+<td>Payments &amp; webhooks</td>
+<td><code>payments.py</code></td>
+<td><code>payment_service.py</code></td>
+<td><code>engagement_repository.py</code></td>
+</tr>
+<tr>
+<td>Payouts</td>
+<td><code>payouts.py</code></td>
+<td>booking_service (report → payout)</td>
+<td><code>engagement_repository.py</code></td>
+</tr>
+<tr>
+<td>Visits, care reports/records</td>
+<td><code>visits.py</code></td>
+<td><code>booking_service.submit_service_report</code></td>
+<td><code>booking_repository.py</code></td>
+</tr>
+<tr>
+<td>Care plans / subscriptions</td>
+<td><code>care_plans.py</code></td>
+<td>recurrence worker</td>
+<td><code>engagement_repository.py</code></td>
+</tr>
+<tr>
+<td>Family members &amp; access scopes</td>
+<td><code>family.py</code></td>
+<td>—</td>
+<td><code>identity_repository.py</code></td>
+</tr>
+<tr>
+<td>Ratings/reviews</td>
+<td><code>ratings.py</code></td>
+<td>—</td>
+<td><code>booking_repository.py</code></td>
+</tr>
+<tr>
+<td>Chat + masked calling</td>
+<td><code>communication.py</code></td>
+<td><code>communication_service.py</code> + <code>anti_bypass_service.py</code></td>
+<td><code>engagement_repository.py</code></td>
+</tr>
+<tr>
+<td>Support tickets</td>
+<td><code>support.py</code></td>
+<td>—</td>
+<td><code>engagement_repository.py</code></td>
+</tr>
+<tr>
+<td>Safety incidents</td>
+<td><code>incidents.py</code></td>
+<td>state machine <code>INCIDENT_RAISED</code> event</td>
+<td><code>engagement_repository.py</code></td>
+</tr>
+<tr>
+<td>Admin (flagged events, audit)</td>
+<td><code>admin.py</code></td>
+<td>—</td>
+<td><code>engagement_repository.py</code></td>
+</tr>
+<tr>
+<td>Analytics</td>
+<td><code>analytics.py</code></td>
+<td>—</td>
+<td><code>engagement_repository.py</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="4.-entity-relationship-diagram" tabindex="-1"><a class="header-anchor" href="#4.-entity-relationship-diagram">4. Entity-Relationship Diagram</a></h2>
+<p>Full schema across <strong>9 model modules / 22 tables</strong>, generated straight from
+<code>app/models/*.py</code> (Alembic migration <code>0001_initial</code> creates these tables
+verbatim from the declarative metadata — the migration can never drift from
+the models).</p>
+<div class="mermaid-wrap"><pre class="mermaid">
+erDiagram
+    USERS ||--o| PATIENT_PROFILES : "has profile (patient role)"
+    USERS ||--o| PROVIDERS : "has profile (provider role)"
+    USERS ||--o{ FAMILY_MEMBERS : "may be linked as"
+    USERS ||--o{ PAYMENT_METHODS : "saves"
+    USERS ||--o{ TICKETS : "raises"
+    USERS ||--o{ NOTIFICATION_RECORDS : "receives"
+    USERS ||--o{ COMMUNICATION_EVENTS : "sends"
+    USERS ||--o{ AUDIT_LOGS : "acts (nullable = system)"
+
+    PATIENT_PROFILES ||--o{ FAMILY_MEMBERS : "grants access to"
+    PATIENT_PROFILES ||--o{ BOOKINGS : "books"
+    PATIENT_PROFILES ||--o{ REVIEWS : "writes"
+    PATIENT_PROFILES ||--o{ CARE_PLAN_SUBSCRIPTIONS : "subscribes to"
+
+    PROVIDERS ||--o{ PROVIDER_CREDENTIALS : "uploads"
+    PROVIDERS ||--o{ PROVIDER_SERVICE_OFFERINGS : "offers"
+    PROVIDERS ||--o{ PROVIDER_AVAILABILITY : "sets weekly slots"
+    PROVIDERS ||--o{ BOOKINGS : "is assigned"
+    PROVIDERS ||--o{ REVIEWS : "receives"
+    PROVIDERS ||--o{ PAYOUTS : "earns"
+
+    SERVICES ||--o{ PROVIDER_SERVICE_OFFERINGS : "priced per provider"
+    SERVICES ||--o{ BOOKINGS : "booked as"
+
+    BOOKINGS ||--o| SERVICE_REPORTS : "closed out by"
+    BOOKINGS ||--o| REVIEWS : "rated via"
+    BOOKINGS ||--o| PAYOUTS : "generates"
+    BOOKINGS ||--o{ PAYMENTS : "paid via"
+    BOOKINGS ||--o| COMMUNICATION_THREADS : "has chat thread"
+    BOOKINGS ||--o{ INCIDENTS : "may raise"
+    BOOKINGS ||--o{ CARE_PLAN_OCCURRENCES : "generated from plan"
+    BOOKINGS }o--o| FAMILY_MEMBERS : "optionally booked on behalf of"
+
+    COMMUNICATION_THREADS ||--o{ COMMUNICATION_EVENTS : "contains"
+
+    PAYMENT_METHODS ||--o{ PAYMENTS : "used for"
+    PAYMENTS ||--o{ PAYMENT_EVENTS : "webhook events for"
+
+    CARE_PACKAGES ||--o{ CARE_PLAN_SUBSCRIPTIONS : "subscribed as"
+    CARE_PLAN_SUBSCRIPTIONS ||--o{ CARE_PLAN_OCCURRENCES : "recurs into"
+
+    USERS {
+        int id PK
+        string phone UK "E.164, regex-checked"
+        string email UK "nullable"
+        string password_hash "nullable (OTP-first auth)"
+        enum role "patient|provider|family_member|admin|support_agent"
+        bool is_active
+        bool mfa_enabled
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    OTP_CHALLENGES {
+        int id PK
+        string phone "indexed"
+        string code_hash "HMAC-SHA256, never plaintext"
+        timestamptz expires_at
+        int attempts
+        bool consumed
+    }
+
+    PATIENT_PROFILES {
+        int id PK
+        int user_id FK "UK -> users.id"
+        string name
+        string dob "DD/MM/YYYY"
+        string gender
+        string city
+        string address
+        float lat "nullable"
+        float lng "nullable"
+        bool onboarding_done
+    }
+
+    FAMILY_MEMBERS {
+        int id PK
+        int patient_id FK "-> patient_profiles.id"
+        int user_id FK "nullable -> users.id"
+        string name
+        string relation
+        string phone
+        jsonb access_scope "viewVisits/viewRecords/chat booleans"
+        string invite_status "pending|active|revoked"
+    }
+
+    SERVICES {
+        int id PK
+        string category "indexed"
+        string name
+        text description
+        int duration_min
+        int base_price_inr
+        string icon
+        bool active
+    }
+
+    PROVIDERS {
+        int id PK
+        int user_id FK "nullable UK -> users.id"
+        string display_name
+        string title
+        jsonb qualifications
+        jsonb languages
+        string city "indexed"
+        float lat
+        float lng
+        float coverage_km
+        text bio
+        int years_exp
+        float rating_avg
+        int rating_count
+        float acceptance_rate "0..1"
+        float cancellation_rate "0..1"
+        enum verification_status "unverified|pending_review|verified|suspended"
+        string photo_color
+    }
+
+    PROVIDER_CREDENTIALS {
+        int id PK
+        int provider_id FK "indexed"
+        string doc_type "license|id_proof|certificate"
+        string s3_key "object storage key only"
+        string status "pending_review|verified|rejected"
+        timestamptz verified_at "nullable"
+        timestamptz expires_at "nullable"
+    }
+
+    PROVIDER_SERVICE_OFFERINGS {
+        int id PK
+        int provider_id FK "indexed"
+        int service_id FK "indexed"
+        int price_inr
+        bool active
+    }
+
+    PROVIDER_AVAILABILITY {
+        int id PK
+        int provider_id FK "indexed"
+        int weekday "0=Mon..6=Sun"
+        int start_min "minutes from midnight"
+        int end_min
+    }
+
+    BOOKINGS {
+        int id PK
+        int patient_id FK "indexed"
+        int provider_id FK "indexed"
+        int service_id FK
+        int family_member_id FK "nullable"
+        enum status "pending_payment|confirmed|en_route|checked_in|in_service|completed|cancelled|no_show|disputed"
+        enum payment_status "unpaid|pending|paid|failed|refunded"
+        timestamptz starts_at "indexed"
+        int duration_min
+        jsonb patient_snapshot "name/age/gender at booking time"
+        string address
+        string city
+        text instructions
+        int amount_inr
+        string currency
+        string checkin_otp "nullable, family-only, never sent to provider"
+        string cancel_reason "nullable"
+        timestamptz confirmed_at "nullable"
+        timestamptz en_route_at "nullable"
+        timestamptz checked_in_at "nullable"
+        timestamptz started_at "nullable"
+        timestamptz completed_at "nullable"
+        int version "optimistic locking"
+    }
+
+    SERVICE_REPORTS {
+        int id PK
+        int booking_id FK "UK -> bookings.id"
+        text summary
+        jsonb vitals
+        text notes
+        timestamptz submitted_at
+    }
+
+    REVIEWS {
+        int id PK
+        int booking_id FK "UK -> bookings.id"
+        int patient_id FK
+        int provider_id FK "indexed"
+        int rating "1..5"
+        text text
+    }
+
+    PAYMENT_METHODS {
+        int id PK
+        int user_id FK "indexed"
+        string type "card|upi"
+        string label
+        string detail "masked only, never PAN/CVV"
+        string provider_ref "nullable gateway token"
+    }
+
+    PAYMENTS {
+        int id PK
+        int booking_id FK "indexed"
+        int method_id FK "nullable"
+        string gateway "sandbox|razorpay|..."
+        string gateway_ref "indexed"
+        int amount_inr
+        string currency
+        enum status "pending|success|failed|refunded"
+    }
+
+    PAYMENT_EVENTS {
+        int id PK
+        int payment_id FK "indexed"
+        string event_ref UK "idempotency key"
+        string type
+        jsonb payload
+        bool processed
+    }
+
+    PAYOUTS {
+        int id PK
+        int provider_id FK "indexed"
+        int booking_id FK "UK -> bookings.id"
+        int amount_inr
+        int platform_fee_inr
+        enum status "payout_ready|processing|paid|on_hold"
+        timestamptz ready_at "nullable"
+        timestamptz paid_at "nullable"
+        string transfer_ref "nullable"
+    }
+
+    COMMUNICATION_THREADS {
+        int id PK
+        int booking_id FK "UK, indexed -> bookings.id"
+    }
+
+    COMMUNICATION_EVENTS {
+        int id PK
+        int thread_id FK "indexed"
+        int sender_user_id FK
+        string author_name
+        text body "stored ALREADY SCRUBBED"
+        bool flagged "indexed"
+        enum flag_severity "low|medium|high, nullable"
+        jsonb flag_patterns
+        int reviewed_by FK "nullable"
+        timestamptz reviewed_at "nullable"
+    }
+
+    NOTIFICATION_RECORDS {
+        int id PK
+        int user_id FK "indexed"
+        string channel "sms|whatsapp|push"
+        string template
+        jsonb payload
+        string status "queued|sent|unsupported"
+        timestamptz sent_at "nullable"
+    }
+
+    TICKETS {
+        int id PK
+        int user_id FK "indexed"
+        string subject
+        text body
+        enum status "open|in_progress|resolved"
+        int assigned_to FK "nullable -> users.id"
+    }
+
+    INCIDENTS {
+        int id PK
+        int booking_id FK "indexed"
+        int reporter_user_id FK
+        string type "safety|no_show|misconduct|other"
+        text description
+        enum status "open|investigating|resolved|dismissed"
+        text resolution "nullable"
+    }
+
+    AUDIT_LOGS {
+        int id PK
+        int actor_user_id FK "nullable = system"
+        string actor_role
+        string entity_type "indexed, e.g. booking|payment|incident"
+        int entity_id "indexed"
+        string action
+        string from_state "nullable"
+        string to_state "nullable"
+        jsonb meta
+        timestamptz created_at "INSERT-ONLY, no updated_at"
+    }
+
+    CARE_PACKAGES {
+        int id PK
+        string name
+        text description
+        int visits_per_month
+        int price_per_month_inr
+        jsonb includes
+        string best_for
+        bool active
+    }
+
+    CARE_PLAN_SUBSCRIPTIONS {
+        int id PK
+        int patient_id FK "indexed"
+        int package_id FK
+        enum status "active|paused|cancelled"
+        int visits_used_this_cycle
+        timestamptz current_period_end "nullable"
+    }
+
+    CARE_PLAN_OCCURRENCES {
+        int id PK
+        int subscription_id FK "indexed"
+        int booking_id FK "nullable -> bookings.id"
+        timestamptz scheduled_for
+        bool generated
+    }
+</pre></div>
+<blockquote>
+<p>Render tip: paste the block above into a Mermaid live editor (e.g.
+<a href="https://mermaid.live">https://mermaid.live</a>) or view it directly in any Markdown viewer with
+Mermaid support (GitHub renders it natively).</p>
+</blockquote>
+<h3 id="4.1-table-reference-(quick-index)" tabindex="-1"><a class="header-anchor" href="#4.1-table-reference-(quick-index)">4.1 Table reference (quick index)</a></h3>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Model file</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>users</code></td>
+<td><code>models/user.py</code></td>
+<td>Single identity table for every role (patient/provider/family/admin/support)</td>
+</tr>
+<tr>
+<td><code>otp_challenges</code></td>
+<td><code>models/booking.py</code></td>
+<td>Hashed OTP codes for phone login, TTL + attempt counting</td>
+</tr>
+<tr>
+<td><code>patient_profiles</code></td>
+<td><code>models/patient.py</code></td>
+<td>1:1 extension of a <code>patient</code> user</td>
+</tr>
+<tr>
+<td><code>family_members</code></td>
+<td><code>models/patient.py</code></td>
+<td>Invited relatives with granular <code>access_scope</code></td>
+</tr>
+<tr>
+<td><code>services</code></td>
+<td><code>models/catalog.py</code></td>
+<td>The service catalogue (nursing, elder care, physio, etc.)</td>
+</tr>
+<tr>
+<td><code>providers</code></td>
+<td><code>models/provider.py</code></td>
+<td>Provider directory — <strong>no phone/email columns by design</strong></td>
+</tr>
+<tr>
+<td><code>provider_credentials</code></td>
+<td><code>models/provider.py</code></td>
+<td>Uploaded license/ID docs pending admin review</td>
+</tr>
+<tr>
+<td><code>provider_service_offerings</code></td>
+<td><code>models/provider.py</code></td>
+<td>Provider × service price list</td>
+</tr>
+<tr>
+<td><code>provider_availability</code></td>
+<td><code>models/provider.py</code></td>
+<td>Weekly recurring availability windows</td>
+</tr>
+<tr>
+<td><code>bookings</code></td>
+<td><code>models/booking.py</code></td>
+<td>The visit lifecycle aggregate — see §5</td>
+</tr>
+<tr>
+<td><code>service_reports</code></td>
+<td><code>models/booking.py</code></td>
+<td>Provider’s end-of-visit report; triggers payout</td>
+</tr>
+<tr>
+<td><code>reviews</code></td>
+<td><code>models/booking.py</code></td>
+<td>1 review per completed booking</td>
+</tr>
+<tr>
+<td><code>payment_methods</code></td>
+<td><code>models/payment.py</code></td>
+<td>Saved UPI/cards (masked only)</td>
+</tr>
+<tr>
+<td><code>payments</code></td>
+<td><code>models/payment.py</code></td>
+<td>One row per payment attempt on a booking</td>
+</tr>
+<tr>
+<td><code>payment_events</code></td>
+<td><code>models/payment.py</code></td>
+<td>Append-only, idempotent webhook log</td>
+</tr>
+<tr>
+<td><code>payouts</code></td>
+<td><code>models/payment.py</code></td>
+<td>Provider earnings, gated by <code>REPORT_SUBMITTED</code> only</td>
+</tr>
+<tr>
+<td><code>communication_threads</code></td>
+<td><code>models/communication.py</code></td>
+<td>1:1 with a booking</td>
+</tr>
+<tr>
+<td><code>communication_events</code></td>
+<td><code>models/communication.py</code></td>
+<td>Every chat message, scrubbed + flagged</td>
+</tr>
+<tr>
+<td><code>notification_records</code></td>
+<td><code>models/communication.py</code></td>
+<td>Outbound SMS/WhatsApp/push log</td>
+</tr>
+<tr>
+<td><code>tickets</code></td>
+<td><code>models/support.py</code></td>
+<td>Support tickets</td>
+</tr>
+<tr>
+<td><code>incidents</code></td>
+<td><code>models/support.py</code></td>
+<td>Safety/no-show/misconduct reports tied to a booking</td>
+</tr>
+<tr>
+<td><code>audit_logs</code></td>
+<td><code>models/support.py</code></td>
+<td>Insert-only event log for every state transition</td>
+</tr>
+<tr>
+<td><code>care_packages</code></td>
+<td><code>models/care_plan.py</code></td>
+<td>Subscribable recurring care plans</td>
+</tr>
+<tr>
+<td><code>care_plan_subscriptions</code></td>
+<td><code>models/care_plan.py</code></td>
+<td>Patient ↔ package subscription</td>
+</tr>
+<tr>
+<td><code>care_plan_occurrences</code></td>
+<td><code>models/care_plan.py</code></td>
+<td>Worker-generated recurring visit slots</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="5.-booking-%2F-visit-lifecycle-(state-machine)" tabindex="-1"><a class="header-anchor" href="#5.-booking-%2F-visit-lifecycle-(state-machine)">5. Booking / visit lifecycle (state machine)</a></h2>
+<p><code>app/state_machines/booking_state_machine.py</code> is a <strong>pure stdlib module</strong>
+(no DB/HTTP imports) — the single source of truth for what transitions are
+legal. It is called <em>only</em> from <code>booking_service.apply_event</code>, and every
+transition writes an insert-only <code>audit_logs</code> row.</p>
+<p><strong>Statuses:</strong> <code>pending_payment → confirmed → en_route → checked_in → in_service → completed</code>, with <code>cancelled</code>, <code>no_show</code>, and <code>disputed</code> as
+side branches.</p>
+<div class="mermaid-wrap"><pre class="mermaid">
+stateDiagram-v2
+    [*] --> pending_payment
+    pending_payment --> confirmed: payment_succeeded
+    pending_payment --> pending_payment: payment_failed / reschedule
+    pending_payment --> cancelled: cancel
+
+    confirmed --> confirmed: reschedule (>2h notice)
+    confirmed --> cancelled: cancel (>2h notice; refund if paid)
+    confirmed --> en_route: provider_departed (issues check-in OTP)
+    confirmed --> no_show: provider_no_show (refund + alert support)
+
+    en_route --> checked_in: otp_verified (OTP must match)
+    en_route --> disputed: incident_raised
+
+    checked_in --> in_service: service_started
+    checked_in --> disputed: incident_raised
+
+    in_service --> completed: service_completed (requests report, notifies family)
+    in_service --> disputed: incident_raised
+
+    disputed --> completed: dispute_resolved(resolution=completed)
+    disputed --> cancelled: dispute_resolved(resolution=cancelled)
+    no_show --> completed: dispute_resolved(resolution=completed)
+    no_show --> cancelled: dispute_resolved(resolution=cancelled)
+
+    completed --> [*]
+    cancelled --> [*]
+</pre></div>
+<p>Key guards enforced in the pure module:</p>
+<ul>
+<li><strong><code>otp_must_match</code></strong> — <code>en_route → checked_in</code> requires the provided
+check-in code to equal the one issued when the provider departed.</li>
+<li><strong><code>cancel_notice</code> / <code>reschedule_notice</code></strong> — blocked online within 2 hours
+of <code>starts_at</code> (must go through support).</li>
+<li><strong><code>resolution_guard</code></strong> — only <code>admin</code>/<code>support_agent</code> can resolve a
+<code>disputed</code> or <code>no_show</code> booking, and only into <code>completed</code> or <code>cancelled</code>.</li>
+<li><strong>Terminal states</strong> (<code>completed</code>, <code>cancelled</code>) accept no further events.</li>
+</ul>
+<p>Side effects declared per-transition (<code>effects</code> tuple) are dispatched by
+<code>booking_service</code>, e.g. <code>issue_checkin_otp</code>, <code>notify_family_checked_in</code>,
+<code>initiate_refund_if_paid</code>, <code>request_service_report</code>, <code>alert_support</code>.</p>
+<hr>
+<h2 id="6.-cross-cutting-business-rules-(non-negotiable%2C-tested)" tabindex="-1"><a class="header-anchor" href="#6.-cross-cutting-business-rules-(non-negotiable%2C-tested)">6. Cross-cutting business rules (non-negotiable, tested)</a></h2>
+<ul>
+<li><strong>Booking state machine</strong> is the <em>only</em> legal way to change a booking’s
+status; <code>booking_service.apply_event</code> is the <em>only</em> caller. Every
+transition is recorded in <code>audit_logs</code>, which is insert-only both at the
+repository layer (no update/delete method exists) and at the database
+layer (migration <code>0001_initial</code> <code>REVOKE</code>s <code>UPDATE, DELETE</code> from the
+<code>carezoa_app</code> role).</li>
+<li><strong>Anti-bypass</strong> — all chat is persisted through <code>communication_events</code>.
+<code>anti_bypass_service.scan_message</code> (pure regex, no DB) detects phone
+numbers, emails, UPI handles, social-media mentions, and
+“pay me directly” phrasing; matches are <strong>scrubbed in the stored body</strong>
+(defense in depth) and <strong>flagged</strong> (never silently blocked) for the
+support queue via <code>flagged</code> / <code>flag_severity</code> / <code>flag_patterns</code>. No
+response payload anywhere includes a provider’s or patient’s raw phone/
+email — <code>providers</code> has no such columns at all.</li>
+<li><strong>Masked calling</strong> — the only voice path is through
+<code>masked_telephony.py</code>, which mints a short-lived relay number
+(<code>MaskedSession</code>); real numbers never appear in any API response.</li>
+<li><strong>Payouts</strong> — a <code>payouts</code> row is created <strong>exclusively</strong> by the
+<code>REPORT_SUBMITTED → PAYOUT_READY</code> flow inside
+<code>booking_service.submit_service_report</code>. There is no manual/off-platform
+way to mark a payout ready.</li>
+<li><strong>Matching / search</strong> (<code>matching_service.py</code>, pure) — hard gates first
+(offers the service, <code>verification_status == verified</code>, has an available
+slot, within <code>coverage_km</code>), then a <strong>weighted score</strong>
+(<code>distance 0.24, rating 0.20, reliability 0.14, cancellation 0.14, experience 0.12, availability_recency 0.10, price 0.06</code>) — price is
+deliberately the smallest weight; results are <strong>never</strong> sorted by price
+alone (enforced by a unit test).</li>
+<li><strong>Security</strong> — every route depends on <code>require_role(...)</code>; admin routes
+additionally require <code>require_admin_mfa</code> (an MFA-issued JWT claim); OTP
+and auth endpoints are rate-limited (<code>SlidingWindowRateLimiter</code>); all
+inputs are Pydantic-validated; payment webhooks are HMAC-signature
+verified and consumed idempotently via <code>payment_events.event_ref</code>
+(unique); logs are structured and PII-stripped.</li>
+<li><strong>Optimistic locking</strong> — <code>bookings.version</code> guards concurrent writers
+(e.g. two lifecycle events racing).</li>
+</ul>
+<hr>
+<h2 id="7.-auth-model" tabindex="-1"><a class="header-anchor" href="#7.-auth-model">7. Auth model</a></h2>
+<ul>
+<li><strong>Identity:</strong> one <code>users</code> table for every role (<code>patient</code>, <code>provider</code>,
+<code>family_member</code>, <code>admin</code>, <code>support_agent</code>) via <code>role</code> enum — no separate
+per-role identity tables.</li>
+<li><strong>Login:</strong> phone + OTP. <code>OtpChallenge</code> stores only an HMAC-SHA256 hash of
+<code>phone:code</code> (never plaintext), with <code>expires_at</code>/<code>attempts</code>/<code>consumed</code>.
+In non-prod, <code>DEV_OTP_CODE</code> (<code>123456</code>) is always accepted.</li>
+<li><strong>Tokens:</strong> JWT access (short TTL, <code>ACCESS_TOKEN_TTL_MIN</code>) + refresh
+(<code>REFRESH_TOKEN_TTL_DAYS</code>), issued by <code>security.issue_token_pair</code>, carrying
+<code>sub</code> (user id), <code>role</code>, and an <code>mfa</code> claim.</li>
+<li><strong>Authorization:</strong> <code>deps.require_role(*roles)</code> guards each router;
+<code>deps.require_admin_mfa</code> additionally requires the token’s <code>mfa</code> claim
+(admin-only routes).</li>
+</ul>
+<hr>
+<h2 id="8.-payments-%26-payouts-flow" tabindex="-1"><a class="header-anchor" href="#8.-payments-%26-payouts-flow">8. Payments &amp; payouts flow</a></h2>
+<ol>
+<li>Patient calls <code>POST /payments/intent</code> for a booking → <code>payment_service</code>
+creates a <code>payments</code> row (<code>status=pending</code>) and returns a
+<code>checkout_url</code> from the configured <code>PaymentGateway</code> (sandbox by default).</li>
+<li>Gateway calls <code>POST /payments/webhook</code> with an HMAC signature
+(<code>verify_webhook_signature</code>); the raw event is stored in <code>payment_events</code>
+keyed by a unique <code>event_ref</code> for idempotent processing.</li>
+<li>On success, <code>payment_service</code> marks the <code>payments</code> row <code>success</code> and
+raises the <code>payment_succeeded</code> event on the booking →
+<code>pending_payment → confirmed</code> in the state machine.</li>
+<li>When the visit completes and the provider submits a <code>service_reports</code>
+row, <code>booking_service.submit_service_report</code> creates the matching
+<code>payouts</code> row (<code>status=payout_ready</code>) — the <em>only</em> path to a payout.</li>
+<li>The Celery <strong><code>process_payouts</code></strong> beat task (hourly) advances
+<code>payout_ready → processing</code> for gateway transfer; <code>mark_paid</code> (admin
+route) finalizes <code>paid</code>.</li>
+</ol>
+<hr>
+<h2 id="9.-background-workers-(celery)" tabindex="-1"><a class="header-anchor" href="#9.-background-workers-(celery)">9. Background workers (Celery)</a></h2>
+<p>Defined in <code>app/workers/celery_app.py</code>, scheduled via <code>celery.conf.beat_schedule</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Task</th>
+<th>Schedule</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>process_payouts</code></td>
+<td>hourly (<code>:15</code>)</td>
+<td><code>payout_ready → processing</code> batch</td>
+</tr>
+<tr>
+<td><code>credential_reminders</code></td>
+<td>daily 09:00</td>
+<td>Nudge providers with expiring/pending credentials</td>
+</tr>
+<tr>
+<td><code>generate_careplan_recurrences</code></td>
+<td>daily 06:30</td>
+<td>Turns <code>care_plan_subscriptions</code> into upcoming <code>care_plan_occurrences</code> / draft bookings</td>
+</tr>
+<tr>
+<td><code>dispatch_notification</code></td>
+<td>on-demand</td>
+<td>Sends a queued <code>notification_records</code> row via the SMS/WhatsApp/push adapter</td>
+</tr>
+</tbody>
+</table>
+<p>Run everything with <code>docker compose up --build</code> (spins up <code>db</code>, <code>redis</code>,
+<code>minio</code>, <code>api</code>, <code>worker</code>, <code>worker-beat</code>).</p>
+<hr>
+<h2 id="10.-integrations-(adapter-pattern)" tabindex="-1"><a class="header-anchor" href="#10.-integrations-(adapter-pattern)">10. Integrations (adapter pattern)</a></h2>
+<p>Every external dependency is behind a small <code>Protocol</code> so it can be swapped
+or mocked without touching services:</p>
+<table>
+<thead>
+<tr>
+<th>Adapter</th>
+<th>File</th>
+<th>Sandbox/default impl</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Payment gateway</td>
+<td><code>integrations/payment_gateway.py</code></td>
+<td><code>SandboxGateway</code> — deterministic checkout URL + HMAC verify</td>
+</tr>
+<tr>
+<td>Masked telephony</td>
+<td><code>integrations/masked_telephony.py</code></td>
+<td>Mock relay-number session, TTL-bound</td>
+</tr>
+<tr>
+<td>Notifications</td>
+<td><code>integrations/notifications.py</code></td>
+<td><code>LoggingSender</code> — logs instead of real SMS/WhatsApp/push</td>
+</tr>
+<tr>
+<td>Maps/distance</td>
+<td><code>integrations/maps.py</code></td>
+<td><code>HaversineAdapter</code> — great-circle distance, no external API</td>
+</tr>
+<tr>
+<td>Object storage</td>
+<td><code>integrations/storage.py</code></td>
+<td>S3-compatible presigned PUT/GET (MinIO locally) — raw credentials never leave the server</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="11.-tests" tabindex="-1"><a class="header-anchor" href="#11.-tests">11. Tests</a></h2>
+<pre><code class="language-bash">pytest                                          # full suite
+python -m unittest discover -s app/tests/unit   # pure-logic subset, no DB needed
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>unit/test_booking_state_machine.py</code></td>
+<td>Every legal transition + every guard/exception path</td>
+</tr>
+<tr>
+<td><code>unit/test_matching_service.py</code></td>
+<td>Hard gates + weighted ranking + “never price-only sort”</td>
+</tr>
+<tr>
+<td><code>unit/test_anti_bypass_service.py</code></td>
+<td>Pattern detection, severity scoring, scrubbing</td>
+</tr>
+<tr>
+<td><code>integration/test_auth_and_rbac.py</code></td>
+<td>OTP request/verify, wrong-code rejection, role-based 403s</td>
+</tr>
+<tr>
+<td><code>integration/test_payment_webhook.py</code></td>
+<td>Bad signature rejection, idempotent replay, booking-state side effect</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2 id="12.-local-setup-(see-readme.md-for-full-detail)" tabindex="-1"><a class="header-anchor" href="#12.-local-setup-(see-readme.md-for-full-detail)">12. Local setup (see <code>README.md</code> for full detail)</a></h2>
+<pre><code class="language-bash">cd carezoa-backend
+cp .env.example .env
+docker compose up db redis minio -d
+pip install .
+alembic upgrade head            # applies app/db/migrations/versions/0001_initial.py
+python -m scripts.seed          # 10 nurses, 10 patients, bookings in every state
+uvicorn app.main:app --reload   # http://localhost:8000/docs (OpenAPI/Swagger)
+</code></pre>
+<p>Sandbox login: any phone number + OTP <code>123456</code> (whenever <code>APP_ENV != prod</code>).</p>
+<hr>
+<h2 id="13.-how-this-relates-to-the-rest-of-the-repo" tabindex="-1"><a class="header-anchor" href="#13.-how-this-relates-to-the-rest-of-the-repo">13. How this relates to the rest of the repo</a></h2>
+<ul>
+<li><strong><code>../API.md</code></strong> documents the same HTTP contract as implemented today by
+the Next.js mock at <code>../src/app/api/v1/*</code> (Drizzle/Postgres, single-file
+route handlers, no auth-by-default). This FastAPI service is the intended
+<strong>production replacement</strong> for that mock — same contract shape, real
+persistence and rules.</li>
+<li><strong><code>../mobile/</code></strong> is the Expo patient app. It currently talks to the Next.js
+mock; pointing <code>EXPO_PUBLIC_API_URL</code> at this service instead is the
+intended migration path once parity is confirmed.</li>
+<li>The two backends deliberately model booking status with different
+vocabularies (mock: <code>scheduled|confirmed|en_route|checked_in|in_service| completed|cancelled</code>; this service: adds <code>pending_payment</code> as the true
+starting state plus <code>no_show</code>/<code>disputed</code>) — reconcile this when wiring the
+mobile app to this service.</li>
+</ul>
+
+  </main>
+</div>
+<button class="back-to-top" id="backToTop" title="Back to top">&#8593;</button>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      background: '#0d1117',
+      primaryColor: '#17323a',
+      primaryTextColor: '#dbe2e8',
+      primaryBorderColor: '#4fd1c5',
+      lineColor: '#5a6b78',
+      secondaryColor: '#1b222a',
+      tertiaryColor: '#12161b',
+      fontFamily: 'Inter, -apple-system, sans-serif'
+    },
+    er: { useMaxWidth: true },
+    flowchart: { useMaxWidth: true },
+    stateDiagram: { useMaxWidth: true }
+  });
+
+  // Build TOC from h2/h3
+  const toc = document.getElementById('toc');
+  const headers = document.querySelectorAll('#content h2, #content h3');
+  headers.forEach(h => {
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent.replace(/[#¤]/g, '').trim();
+    a.className = h.tagName === 'H2' ? 'h2' : 'h3';
+    toc.appendChild(a);
+  });
+
+  // Back to top
+  const btn = document.getElementById('backToTop');
+  window.addEventListener('scroll', () => {
+    btn.classList.toggle('show', window.scrollY > 400);
+  });
+  btn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+</script>
+</body>
+</html>
