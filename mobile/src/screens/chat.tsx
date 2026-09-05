@@ -29,6 +29,7 @@ export function Messages() {
   const booking = useBooking(id ?? "", 0);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
   const items = messages.data?.items ?? [];
   // BUG-H04 fix: instead of a 1-second interval that causes re-renders every second,
   // only schedule a single timeout for the next pending message's reveal time

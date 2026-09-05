@@ -1,6 +1,6 @@
 import "../src/theme/globals.css";
 import "../src/i18n";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -18,7 +18,7 @@ export default function RootLayout() {
   const segments = useSegments();
   const { hydrated, token, hydrate, setPatient } = useAuth();
   // BUG-H06 fix: track whether we've done the initial auth redirect to prevent flash
-  const initialRedirectDone = useRef(false);
+  const [initialRedirectDone, setInitialRedirectDone] = useState(false);
 
   // boot: restore token from SecureStore, language from AsyncStorage,
   // and request push permissions.
@@ -51,17 +51,14 @@ export default function RootLayout() {
     const inAuthGroup = segments[0] === "(auth)";
     if (!token && !inAuthGroup) {
       router.replace("/(auth)/signup");
-      initialRedirectDone.current = true;
     } else if (token && inAuthGroup) {
       router.replace("/(tabs)/home");
-      initialRedirectDone.current = true;
-    } else {
-      initialRedirectDone.current = true;
     }
+    setInitialRedirectDone(true);
   }, [hydrated, token, segments, router]);
 
   // BUG-H06 fix: show branded splash while hydrating + initial redirect
-  if (!hydrated || !initialRedirectDone.current) {
+  if (!hydrated || !initialRedirectDone) {
     return (
       <View className="flex-1 items-center justify-center bg-paper">
         <View className="h-20 w-20 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(14,124,123,0.12)" }}>
