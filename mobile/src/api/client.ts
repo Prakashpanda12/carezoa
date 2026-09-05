@@ -83,7 +83,45 @@ export const absoluteUrl = (path: string) =>
   path.startsWith("http") ? path : `${API_BASE}${path}`;
 
 export const api = {
-  // auth
+  // auth - check if phone exists
+  checkPhone: (phone: string) =>
+    request<{ exists: boolean; needsOnboarding?: boolean }>(
+      "/auth/check",
+      { method: "POST", body: JSON.stringify({ phone }) },
+    ),
+
+  // auth - signup (new users)
+  signupRequest: (data: {
+    phone: string;
+    name: string;
+    dob?: string;
+    gender?: string;
+    city?: string;
+    address?: string;
+  }) =>
+    request<{ requestId: string; expiresInSec: number; devCode?: string }>(
+      "/auth/signup",
+      { method: "POST", body: JSON.stringify(data) },
+    ),
+  signupVerify: (phone: string, code: string) =>
+    request<{ token: string; isNewUser: boolean; patient: PatientProfile }>(
+      "/auth/signup/verify",
+      { method: "POST", body: JSON.stringify({ phone, code }) },
+    ),
+
+  // auth - login (existing users)
+  loginRequest: (phone: string) =>
+    request<{ requestId: string; expiresInSec: number; devCode?: string }>(
+      "/auth/login",
+      { method: "POST", body: JSON.stringify({ phone }) },
+    ),
+  loginVerify: (phone: string, code: string) =>
+    request<{ token: string; isNewUser: boolean; patient: PatientProfile }>(
+      "/auth/login/verify",
+      { method: "POST", body: JSON.stringify({ phone, code }) },
+    ),
+
+  // legacy endpoints (for backward compatibility)
   otpRequest: (phone: string) =>
     request<{ requestId: string; expiresInSec: number; devCode: string }>(
       "/auth/otp/request",

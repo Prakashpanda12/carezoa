@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
   Linking,
@@ -26,9 +26,9 @@ import {
 } from "../utils/schemas";
 import { Button, Field, Card, cx } from "../components/ui";
 
-type SignupStep = "welcome" | "phone" | "otp" | "profile" | "terms" | "success";
+type SignupStep = "welcome" | "phone" | "details" | "otp" | "terms" | "success";
 
-const STEPS: SignupStep[] = ["welcome", "phone", "otp", "profile", "terms", "success"];
+const STEPS: SignupStep[] = ["welcome", "phone", "details", "otp", "terms", "success"];
 
 export function SignupFlow() {
   const { t } = useTranslation();
@@ -39,6 +39,7 @@ export function SignupFlow() {
 
   const [step, setStep] = useState<SignupStep>("welcome");
   const [phone, setPhone] = useState("");
+  const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState("");
   const [loadingMessage, setLoadingMessage] = useState("");
@@ -48,77 +49,95 @@ export function SignupFlow() {
     defaultValues: { phone: "+91" },
   });
 
+  const detailsForm = useForm<ProfileSetupForm>({
+    resolver: zodResolver(profileSetupSchema),
+    defaultValues: { name: "", dob: "", gender: "F", city: "", address: "" },
+  });
+
   const otpForm = useForm<OtpForm>({
     resolver: zodResolver(otpSchema),
     defaultValues: { code: "" },
   });
 
-  const profileForm = useForm<ProfileSetupForm>({
-    resolver: zodResolver(profileSetupSchema),
-    defaultValues: { name: "", dob: "", gender: "F", city: "", address: "" },
-  });
-
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  const sendOtp = phoneForm.handleSubmit(async (v) => {
+  // Step 1: Check phone and determine flow
+  const handlePhoneSubmit = phoneForm.handleSubmit(async (v) => {
     setBusy(true);
     setServerError("");
     try {
-      await api.otpRequest(v.phone.replace(/[\s-]/g, ""));
-      setPhone(v.phone);
-      setStep("otp");
-    } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Failed to send OTP");
-    } finally {
-      setBusy(false);
-    }
-  });
-
-  // BUG-C04 fix: fetch profile immediately after OTP verify to avoid null patient
-  const verifyOtp = otpForm.handleSubmit(async (v) => {
-    setBusy(true);
-    setServerError("");
-    setLoadingMessage("Verifying your code...");
-    try {
-      const res = await api.otpVerify(phone.replace(/[\s-]/g, ""), v.code);
+      const normalizedPhone = v.phone.replace(/[\s-]/g, "");
+      const checkResult = await api.checkPhone(normalizedPhone);
       
-      // Set session first with null patient
-      setLoadingMessage("Setting up your account...");
-      await setSession(res.access_token, null);
+      setPhone(normalizedPhone);
+      setIsNewUser(!checkResult.exists);
       
-      // Small delay to ensure session is fully established
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Now fetch profile
-      setLoadingMessage("Loading your profile...");
-      try {
-        const profile = await api.getProfile();
-        setPatient(profile);
-      } catch (err) {
-        // If profile fetch fails for a new user, that's OK — they'll fill it in the next step
-        console.warn("Profile fetch failed, user will complete profile setup:", err);
+      if (checkResult.exists) {
+        // Existing user - request login OTP directly
+        setLoadingMessage("Sending verification code...");
+        await api.loginRequest(normalizedPhone);
+        setStep("otp");
+      } else {
+        // New user - collect details first
+        setStep("details");
       }
-      
-      setStep("profile");
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Verification failed");
+      setServerError(e instanceof Error ? e.message : "Failed to check phone number");
     } finally {
       setBusy(false);
       setLoadingMessage("");
     }
   });
 
-  const saveProfile = profileForm.handleSubmit(async (v) => {
+  // Step 2: Collect details (new users only) and request signup OTP
+  const handleDetailsSubmit = detailsForm.handleSubmit(async (v) => {
     setBusy(true);
     setServerError("");
     try {
-      const patient = await api.patchProfile(v);
-      setPatient(patient);
-      setStep("terms");
+      setLoadingMessage("Sending verification code...");
+      await api.signupRequest({
+        phone,
+        name: v.name,
+        dob: v.dob || undefined,
+        gender: v.gender || undefined,
+        city: v.city || undefined,
+        address: v.address || undefined,
+      });
+      setStep("otp");
     } catch (e) {
-      setServerError(e instanceof Error ? e.message : "Failed to save profile");
+      setServerError(e instanceof Error ? e.message : "Failed to send OTP");
     } finally {
       setBusy(false);
+      setLoadingMessage("");
+    }
+  });
+
+  // Step 3: Verify OTP
+  const verifyOtp = otpForm.handleSubmit(async (v) => {
+    setBusy(true);
+    setServerError("");
+    setLoadingMessage("Verifying your code...");
+    try {
+      const result = isNewUser
+        ? await api.signupVerify(phone, v.code)
+        : await api.loginVerify(phone, v.code);
+      
+      setLoadingMessage("Setting up your account...");
+      await setSession(result.token, result.patient);
+      setPatient(result.patient);
+      
+      // Check if onboarding is complete
+      if (result.patient.onboardingDone) {
+        setStep("terms");
+      } else {
+        // Shouldn't happen with new flow, but handle it
+        setStep("terms");
+      }
+    } catch (e) {
+      setServerError(e instanceof Error ? e.message : "Verification failed");
+    } finally {
+      setBusy(false);
+      setLoadingMessage("");
     }
   });
 
@@ -141,15 +160,23 @@ export function SignupFlow() {
       setStep(prevStep);
       setServerError("");
       
-      // Clear phone form when going back from OTP to phone step
-      if (step === "otp" && prevStep === "phone") {
-        phoneForm.reset({ phone: "+91" });
+      // Reset forms when going back
+      if (step === "otp" && prevStep === "details") {
+        otpForm.reset({ code: "" });
+      } else if (step === "details" && prevStep === "phone") {
+        detailsForm.reset();
         setPhone("");
+        setIsNewUser(null);
+      } else if (step === "otp" && prevStep === "phone") {
+        // Existing user going back from OTP to phone
+        otpForm.reset({ code: "" });
+        setPhone("");
+        setIsNewUser(null);
       }
     }
   };
 
-  // BUG-H05 fix: auto-format DOB as DD/MM/YYYY while typing
+  // Auto-format DOB as DD/MM/YYYY while typing
   const formatDob = (text: string) => {
     const digits = text.replace(/\D/g, "").slice(0, 8);
     if (digits.length <= 2) return digits;
@@ -170,7 +197,7 @@ export function SignupFlow() {
             <Ionicons name="arrow-back" size={24} color="#0E7C7B" />
           </TouchableOpacity>
           <Text className="ml-3 text-[16px] font-semibold text-ink">
-            {t("signup.createAccount")}
+            {isNewUser === false ? "Sign In" : t("signup.createAccount")}
           </Text>
           {/* Progress indicator */}
           <View className="ml-auto">
@@ -213,13 +240,8 @@ export function SignupFlow() {
                 title={t("signup.getStarted")}
                 onPress={() => setStep("phone")}
                 testID="signup-get-started"
-                accessibilityLabel="Create a new account"
+                accessibilityLabel="Create a new account or sign in"
               />
-              <TouchableOpacity onPress={() => router.replace("/(auth)/login")} accessibilityRole="link" accessibilityLabel="Sign in with existing account">
-                <Text className="text-center text-[14px] font-semibold text-brand">
-                  {t("signup.alreadyHaveAccount")}
-                </Text>
-              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -231,10 +253,10 @@ export function SignupFlow() {
               <Ionicons name="call" size={24} color="#0E7C7B" />
             </View>
             <Text className="mt-5 text-[26px] font-bold tracking-tight text-ink" accessibilityRole="header">
-              {t("signup.phoneTitle")}
+              Enter Your Phone Number
             </Text>
             <Text className="mt-1.5 text-[13.5px] text-soft">
-              {t("signup.phoneBody")}
+              We'll send you a verification code to get started
             </Text>
 
             <View className="mt-8">
@@ -264,11 +286,142 @@ export function SignupFlow() {
                 </Text>
               )}
               <Button
-                title={t("auth.sendOtp")}
+                title="Continue"
                 loading={busy}
-                onPress={sendOtp}
-                testID="signup-send-otp"
-                accessibilityLabel="Send verification code to phone number"
+                onPress={handlePhoneSubmit}
+                testID="signup-continue-phone"
+                accessibilityLabel="Continue with phone number"
+              />
+            </View>
+          </View>
+        )}
+
+        {/* Details Step (New Users Only) */}
+        {step === "details" && (
+          <View className="pt-8">
+            <View className="h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft">
+              <Ionicons name="person-add" size={24} color="#0E7C7B" />
+            </View>
+            <Text className="mt-5 text-[26px] font-bold tracking-tight text-ink" accessibilityRole="header">
+              Tell Us About Yourself
+            </Text>
+            <Text className="mt-1.5 text-[13.5px] text-soft">
+              Create your profile to get started with Carezoa
+            </Text>
+
+            <View className="mt-6">
+              <Controller
+                control={detailsForm.control}
+                name="name"
+                render={({ field: { value, onChange } }) => (
+                  <Field
+                    label="Full Name *"
+                    icon="person-outline"
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="Rahul Kumar"
+                    error={detailsForm.formState.errors.name?.message}
+                    testID="signup-name"
+                    accessibilityLabel="Full name"
+                  />
+                )}
+              />
+              <Controller
+                control={detailsForm.control}
+                name="dob"
+                render={({ field: { value, onChange } }) => (
+                  <Field
+                    label="Date of Birth"
+                    icon="calendar-outline"
+                    value={value}
+                    onChangeText={(txt) => onChange(formatDob(txt))}
+                    placeholder="14/09/1991"
+                    keyboardType="number-pad"
+                    error={detailsForm.formState.errors.dob?.message}
+                    accessibilityLabel="Date of birth in DD/MM/YYYY format"
+                  />
+                )}
+              />
+              <Controller
+                control={detailsForm.control}
+                name="gender"
+                render={({ field: { value, onChange } }) => (
+                  <View className="mb-4" accessibilityRole="radiogroup" accessibilityLabel="Gender selection">
+                    <Text className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-faint">
+                      Gender
+                    </Text>
+                    <View className="flex-row gap-2">
+                      {[
+                        { value: "F" as const, label: "Female" },
+                        { value: "M" as const, label: "Male" },
+                        { value: "O" as const, label: "Other" },
+                      ].map((g) => (
+                        <TouchableOpacity
+                          key={g.value}
+                          onPress={() => onChange(g.value)}
+                          className={cx(
+                            "flex-1 items-center rounded-2xl border py-3",
+                            value === g.value ? "border-brand bg-brand-soft" : "border-line bg-card"
+                          )}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: value === g.value }}
+                          accessibilityLabel={g.label}
+                        >
+                          <Text
+                            className={cx(
+                              "text-[13px] font-bold",
+                              value === g.value ? "text-brand-dark" : "text-soft"
+                            )}
+                          >
+                            {g.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              />
+              <Controller
+                control={detailsForm.control}
+                name="city"
+                render={({ field: { value, onChange } }) => (
+                  <Field
+                    label="City"
+                    icon="business-outline"
+                    value={value}
+                    onChangeText={onChange}
+                    placeholder="Bhubaneswar"
+                    error={detailsForm.formState.errors.city?.message}
+                    accessibilityLabel="City"
+                  />
+                )}
+              />
+              <Controller
+                control={detailsForm.control}
+                name="address"
+                render={({ field: { value, onChange } }) => (
+                  <Field
+                    label="Address"
+                    icon="home-outline"
+                    value={value}
+                    onChangeText={onChange}
+                    multiline
+                    placeholder="123 Main Street, Patia"
+                    error={detailsForm.formState.errors.address?.message}
+                    accessibilityLabel="Care address"
+                  />
+                )}
+              />
+              {!!serverError && (
+                <Text className="mb-3 text-[13px] font-semibold text-danger" accessibilityRole="alert">
+                  {serverError}
+                </Text>
+              )}
+              <Button
+                title="Continue"
+                loading={busy}
+                onPress={handleDetailsSubmit}
+                accessibilityLabel="Save details and send OTP"
               />
             </View>
           </View>
@@ -281,10 +434,10 @@ export function SignupFlow() {
               <Ionicons name="lock-closed" size={24} color="#0E7C7B" />
             </View>
             <Text className="mt-5 text-[26px] font-bold tracking-tight text-ink" accessibilityRole="header">
-              {t("auth.otpTitle")}
+              Verify Your Phone
             </Text>
             <Text className="mt-1.5 text-[13.5px] text-soft">
-              {t("auth.otpBody", { phone })}
+              Enter the 6-digit code sent to {phone}
             </Text>
 
             <View className="mt-8">
@@ -320,7 +473,7 @@ export function SignupFlow() {
               />
               <TouchableOpacity
                 onPress={() => {
-                  setStep("phone");
+                  goBack();
                   setServerError("");
                 }}
                 className="mt-4 items-center"
@@ -331,132 +484,6 @@ export function SignupFlow() {
                   Use a different phone number
                 </Text>
               </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Profile Step */}
-        {step === "profile" && (
-          <View className="pt-8">
-            <Text className="text-[26px] font-bold tracking-tight text-ink" accessibilityRole="header">
-              {t("auth.setupTitle")}
-            </Text>
-            <Text className="mt-1.5 text-[13.5px] text-soft">
-              {t("signup.profileBody")}
-            </Text>
-
-            <View className="mt-6">
-              <Controller
-                control={profileForm.control}
-                name="name"
-                render={({ field: { value, onChange } }) => (
-                  <Field
-                    label={t("auth.nameLabel")}
-                    icon="person-outline"
-                    value={value}
-                    onChangeText={onChange}
-                    error={profileForm.formState.errors.name?.message}
-                    testID="signup-name"
-                    accessibilityLabel="Full name"
-                  />
-                )}
-              />
-              <Controller
-                control={profileForm.control}
-                name="dob"
-                render={({ field: { value, onChange } }) => (
-                  <Field
-                    label={t("auth.dobLabel")}
-                    icon="calendar-outline"
-                    value={value}
-                    onChangeText={(txt) => onChange(formatDob(txt))}
-                    placeholder="14/09/1991"
-                    keyboardType="number-pad"
-                    error={profileForm.formState.errors.dob?.message}
-                    accessibilityLabel="Date of birth in DD/MM/YYYY format"
-                  />
-                )}
-              />
-              <Controller
-                control={profileForm.control}
-                name="gender"
-                render={({ field: { value, onChange } }) => (
-                  <View className="mb-4" accessibilityRole="radiogroup" accessibilityLabel="Gender selection">
-                    <Text className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-faint">
-                      {t("auth.genderLabel")}
-                    </Text>
-                    <View className="flex-row gap-2">
-                      {[
-                        { value: "F" as const, label: "Female" },
-                        { value: "M" as const, label: "Male" },
-                        { value: "O" as const, label: "Other" },
-                      ].map((g) => (
-                        <TouchableOpacity
-                          key={g.value}
-                          onPress={() => onChange(g.value)}
-                          className={cx(
-                            "flex-1 items-center rounded-2xl border py-3",
-                            value === g.value ? "border-brand bg-brand-soft" : "border-line bg-card"
-                          )}
-                          accessibilityRole="radio"
-                          accessibilityState={{ selected: value === g.value }}
-                          accessibilityLabel={g.label}
-                        >
-                          <Text
-                            className={cx(
-                              "text-[13px] font-bold",
-                              value === g.value ? "text-brand-dark" : "text-soft"
-                            )}
-                          >
-                            {g.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
-                )}
-              />
-              <Controller
-                control={profileForm.control}
-                name="city"
-                render={({ field: { value, onChange } }) => (
-                  <Field
-                    label={t("auth.cityLabel")}
-                    icon="business-outline"
-                    value={value}
-                    onChangeText={onChange}
-                    placeholder="Bhubaneswar"
-                    error={profileForm.formState.errors.city?.message}
-                    accessibilityLabel="City"
-                  />
-                )}
-              />
-              <Controller
-                control={profileForm.control}
-                name="address"
-                render={({ field: { value, onChange } }) => (
-                  <Field
-                    label={t("auth.addressLabel")}
-                    icon="home-outline"
-                    value={value}
-                    onChangeText={onChange}
-                    multiline
-                    error={profileForm.formState.errors.address?.message}
-                    accessibilityLabel="Care address"
-                  />
-                )}
-              />
-              {!!serverError && (
-                <Text className="mb-3 text-[13px] font-semibold text-danger" accessibilityRole="alert">
-                  {serverError}
-                </Text>
-              )}
-              <Button
-                title={t("common.continue")}
-                loading={busy}
-                onPress={saveProfile}
-                accessibilityLabel="Save profile and continue"
-              />
             </View>
           </View>
         )}
@@ -506,7 +533,6 @@ export function SignupFlow() {
               </Text>
             </TouchableOpacity>
 
-            {/* BUG-L01 fix: link to full terms */}
             <TouchableOpacity
               onPress={() => Linking.openURL("https://carezoa.com/terms").catch(() => {})}
               className="mt-2 items-center"
@@ -541,10 +567,13 @@ export function SignupFlow() {
               <Ionicons name="checkmark-circle" size={56} color="#10B981" />
             </View>
             <Text className="mt-8 text-center text-[28px] font-bold tracking-tight text-ink" accessibilityRole="header">
-              {t("signup.successTitle")}
+              {isNewUser ? "Welcome to Carezoa!" : "Welcome Back!"}
             </Text>
             <Text className="mt-3 text-center text-[15px] leading-relaxed text-soft">
-              {t("signup.successBody")}
+              {isNewUser 
+                ? "Your account has been created successfully. You're all set to book healthcare services!"
+                : "You've successfully signed in. Ready to continue your care journey!"
+              }
             </Text>
             <View className="mt-12 w-full">
               <Button
