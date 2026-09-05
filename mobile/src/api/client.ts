@@ -14,8 +14,11 @@ import type {
   Ticket,
 } from "../types/api";
 
+// Next.js backend runs on port 3000 by default
+// For Android emulator: 10.0.2.2 is the special alias for localhost
+// For physical devices: use your machine's LAN IP address via EXPO_PUBLIC_API_URL
 const DEFAULT_BASE =
-  Platform.OS === "android" ? "http://10.0.2.2:8000" : "http://localhost:8000";
+  Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
 
 export const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_BASE;
 const V1 = `${API_BASE}/api/v1`;
