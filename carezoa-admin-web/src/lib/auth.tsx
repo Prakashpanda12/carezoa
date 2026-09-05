@@ -33,7 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       // Fetch current user profile
-      const response = await apiClient.get('/patients/me');
+      const response = await apiClient.get('/auth/me');
       const userData = response.data;
       
       // Only allow admin/support_agent roles
@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       tokenManager.setTokens(access_token, refresh_token);
 
       // Fetch user profile
-      const profileResponse = await apiClient.get('/patients/me');
+      const profileResponse = await apiClient.get('/auth/me');
       const userData = profileResponse.data;
       
       // Only allow admin/support_agent roles

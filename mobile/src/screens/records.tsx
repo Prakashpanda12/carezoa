@@ -41,10 +41,10 @@ export function CareRecords() {
   return (
     <Screen onRefresh={() => records.refetch()} refreshing={records.isRefetching}>
       <Header title={t("records.title")} subtitle="Reports from completed visits" />
-      {(records.data?.items.length ?? 0) === 0 && (
+      {(records.data?.items?.length ?? 0) === 0 && (
         <EmptyState icon="document-text-outline" title="No records yet" body={t("records.empty")} />
       )}
-      {records.data?.items.map((r) => (
+      {records.data?.items?.map((r) => (
         <Card key={r.id} className="mb-3">
           <View className="flex-row items-center gap-3">
             <ProviderPhoto name={r.booking.provider?.name ?? ""} photoColor={r.booking.provider?.photoColor ?? "moss"} size={42} />

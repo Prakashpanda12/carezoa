@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { useBookings } from "../api/hooks";
@@ -48,7 +49,7 @@ export function UpcomingVisits() {
         {bookings.isError && (
           <ErrorState label="Couldn't load visits." onRetry={() => bookings.refetch()} />
         )}
-        {bookings.data?.items.length === 0 && (
+        {bookings.data?.items?.length === 0 && (
           <EmptyState
             icon="calendar-outline"
             title={scope === "upcoming" ? "No upcoming visits" : "No past visits"}
@@ -59,7 +60,7 @@ export function UpcomingVisits() {
             }
           />
         )}
-        {bookings.data?.items.map((b) => (
+        {bookings.data?.items?.map((b) => (
           <BookingCard key={b.id} booking={b} t={t} onPress={() => router.push(`/visit/${b.id}`)} />
         ))}
       </View>

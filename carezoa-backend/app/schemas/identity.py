@@ -26,6 +26,16 @@ class TokenOut(BaseModel):
     is_new_user: bool
 
 
+class UserOut(BaseModel):
+    id: int
+    phone: str
+    role: str
+    is_active: bool
+    mfa_enabled: bool
+
+    model_config = {"from_attributes": True}
+
+
 class PatientOut(BaseModel):
     id: int
     user_id: int
