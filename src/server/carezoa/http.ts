@@ -7,12 +7,35 @@ import {
   type CzProviderRow,
 } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { getPatientIdFromToken } from "./jwtService";
 
-/** Demo auth: token shape `cz_<patientId>_<random>`; missing header falls back to patient 1 (dev). */
+/**
+ * Extract patient ID from authorization token
+ * Supports both old format (cz_<patientId>_<random>) and new JWT format
+ * Falls back to patient 1 in dev mode if no valid token
+ */
 export function getPatientId(req: Request): number {
   const auth = req.headers.get("authorization") ?? "";
-  const m = auth.match(/^Bearer cz_(\d+)_/);
-  return m ? Number(m[1]) : 1;
+  
+  // Try JWT format first
+  if (auth.startsWith("Bearer ")) {
+    const token = auth.slice(7);
+    
+    // Try JWT token
+    const jwtPatientId = getPatientIdFromToken(token);
+    if (jwtPatientId) {
+      return jwtPatientId;
+    }
+    
+    // Fallback to old format: cz_<patientId>_<random>
+    const m = token.match(/^cz_(\d+)_/);
+    if (m) {
+      return Number(m[1]);
+    }
+  }
+  
+  // Dev mode: default to patient 1
+  return 1;
 }
 
 export function err(status: number, message: string) {
