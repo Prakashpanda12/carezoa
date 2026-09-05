@@ -42,42 +42,10 @@ class SignupOut(BaseModel):
     dev_code: str | None = None  # sandbox only
 
 
-class SignupVerifyIn(BaseModel):
-    phone: str
-    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
-
-
-class SignupVerifyOut(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    access_expires_at: int
-    is_new_user: bool = True
-    patient: PatientOut
-
-
-class LoginIn(BaseModel):
-    phone: str = Field(pattern=r"^\+?[0-9\s-]{10,17}$")
-
-
 class LoginOut(BaseModel):
     request_id: int
     expires_in_sec: int
     dev_code: str | None = None  # sandbox only
-
-
-class LoginVerifyIn(BaseModel):
-    phone: str
-    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
-
-
-class LoginVerifyOut(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    access_expires_at: int
-    is_new_user: bool = False
-    patient: PatientOut
 
 
 class TokenOut(BaseModel):
