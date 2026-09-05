@@ -1,0 +1,23 @@
+{
+  "cli": { "version": ">= 13.0.0", "appVersionSource": "remote" },
+  "build": {
+    "dev-simulator": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": { "simulator": true },
+      "env": { "EXPO_PUBLIC_API_URL": "http://localhost:3000" }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": { "EXPO_PUBLIC_API_URL": "https://api-staging.carezoa.example" },
+      "channel": "preview"
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": { "EXPO_PUBLIC_API_URL": "https://api.carezoa.example" },
+      "channel": "production"
+    }
+  },
+  "submit": { "production": {} }
+}

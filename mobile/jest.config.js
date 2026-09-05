@@ -1,0 +1,7 @@
+module.exports = {
+  preset: "jest-expo",
+  transformIgnorePatterns: [
+    "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@tanstack/react-query|zustand|nativewind|i18next|react-i18next)/)",
+  ],
+  testMatch: ["**/__tests__/**/*.test.(ts|tsx)"],
+};

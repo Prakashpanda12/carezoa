@@ -1,0 +1,84 @@
+appId: com.carezoa.patient
+# Critical e2e: search → book → pay (sandbox WebView) → check-in confirmation.
+# Run a dev client first:
+#   EXPO_PUBLIC_API_URL=http://<LAN-IP>:3000 npx expo start --dev-client
+# then: maestro test maestro/book-visit.yaml ∟ (device/emulator must reach the backend)
+---
+- launchApp
+
+# --- auth (sandbox OTP 123456) ---
+- tapOn:
+    id: onboarding-continue
+    optional: true
+- tapOn:
+    id: onboarding-continue
+    optional: true
+- tapOn:
+    id: onboarding-continue
+    optional: true
+- inputText:
+    id: phone-input
+    text: "+919437000001"
+- tapOn:
+    id: send-otp
+- inputText:
+    id: otp-input
+    text: "123456"
+- tapOn:
+    id: verify-otp
+
+# profile setup only appears for brand-new users
+- runFlow:
+    when:
+      visible: setup-name
+    commands:
+      - inputText: { id: setup-name, text: "Maya Mohanty" }
+
+- assertVisible: "Care services"
+
+# --- search → provider → book ---
+- tapOn: "Search nurses, elder care, physio…"
+- inputText:
+    id: search-input
+    text: "Anita"
+- tapOn:
+    text: "Anita Das"
+- assertVisible: "Services offered"
+- tapOn:
+    id: book-now
+
+# step 1: date & time
+- tapOn: "10:00"
+- tapOn:
+    id: booking-step-continue
+
+# step 2: patient details (draft may prefill some)
+- inputText:
+    id: booking-patient-name
+    text: "Biren Mohanty"
+- tapOn: "Continue"
+- tapOn:
+    id: proceed-to-pay
+
+# --- payment (sandbox gateway inside the WebView) ---
+- tapOn:
+    text: "UPI"
+- tapOn:
+    id: pay-now
+- extendedWaitUntil:
+    visible: "CAREZOA PAY"
+    timeout: 15000
+- tapOn: "Simulate failure"        # exercises the failure branch
+- assertVisible: "didn't go through"
+- tapOn:
+    id: pay-now
+- extendedWaitUntil:
+    visible: "CAREZOA PAY"
+    timeout: 15000
+- tapOn: "^Pay"
+
+# --- confirmation ---
+- assertVisible: "Booking confirmed!"
+- tapOn:
+    id: success-view-visits
+- assertVisible: "Confirmed"

@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: carezoa
+      POSTGRES_PASSWORD: carezoa
+      POSTGRES_DB: carezoa
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U carezoa"], interval: 5s, retries: 10 }
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    healthcheck: { test: ["CMD", "redis-cli", "ping"], interval: 5s, retries: 10 }
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment: { MINIO_ROOT_USER: minio, MINIO_ROOT_PASSWORD: minio123 }
+    ports: ["9000:9000", "9001:9001"]
+
+  api:
+    build: .
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://carezoa:carezoa@db:5432/carezoa
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CELERY_RESULT_BACKEND: redis://redis:6379/2
+      S3_ENDPOINT: http://minio:9000
+    volumes: ["./app:/srv/app"]
+    ports: ["8000:8000"]
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+
+  worker:
+    build: .
+    command: celery -A app.workers.celery_app.celery worker --loglevel=info --concurrency=4
+    env_file: .env
+    depends_on: [api]
+
+  worker-beat:
+    build: .
+    command: celery -A app.workers.celery_app.celery beat --loglevel=info
+    env_file: .env
+    depends_on: [api]
+
+volumes:
+  pgdata:
