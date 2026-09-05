@@ -185,7 +185,7 @@ export function SignupFlow() {
       {loadingMessage && (
         <View className="absolute inset-0 z-50 items-center justify-center bg-paper/90">
           <View className="items-center rounded-2xl bg-card p-6 shadow-lg">
-            <View className="mb-3 h-8 w-8 animate-spin rounded-full border-4 border-brand border-t-transparent" />
+            <View className="mb-3 h-8 w-8 animate-spin rounded-full border-4 border-brand border-t-transparent"></View>
             <Text className="text-[14px] font-medium text-ink">{loadingMessage}</Text>
           </View>
         </View>
