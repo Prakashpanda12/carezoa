@@ -3,6 +3,13 @@
 Production-grade FastAPI backend for the home-healthcare marketplace
 (Python 3.12 · FastAPI · SQLAlchemy 2.0 async · PostgreSQL · Redis · Celery).
 
+> 📖 **New here?** Open [`ARCHITECTURE.html`](./ARCHITECTURE.html) in a
+> browser for the full picture with rendered diagrams — folder-by-folder
+> walkthrough, the complete Entity-Relationship Diagram (all 22 tables), the
+> booking/visit state machine, and every non-negotiable business rule baked
+> into the code. ([`ARCHITECTURE.md`](./ARCHITECTURE.md) is the raw
+> Markdown source, same content.)
+
 ## Local setup
 
 ```bash
