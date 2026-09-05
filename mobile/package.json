@@ -47,5 +47,11 @@
     "jest-expo": "~52.0.2",
     "react-test-renderer": "18.3.1",
     "typescript": "~5.3.3"
+  },
+  "overrides": {
+    "metro": "0.81.0",
+    "metro-resolver": "0.81.0",
+    "metro-config": "0.81.0",
+    "metro-core": "0.81.0"
   }
 }
