@@ -14,11 +14,11 @@ import type {
   Ticket,
 } from "../types/api";
 
-// Next.js backend runs on port 3000 by default
+// Python/FastAPI backend runs on port 8000
 // For Android emulator: 10.0.2.2 is the special alias for localhost
 // For physical devices: use your machine's LAN IP address via EXPO_PUBLIC_API_URL
 const DEFAULT_BASE =
-  Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
+  Platform.OS === "android" ? "http://10.0.2.2:8000" : "http://localhost:8000";
 
 export const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_BASE;
 const V1 = `${API_BASE}/api/v1`;
@@ -85,50 +85,27 @@ export const absoluteUrl = (path: string) =>
 export const api = {
   // auth - check if phone exists
   checkPhone: (phone: string) =>
-    request<{ exists: boolean; needsOnboarding?: boolean }>(
+    request<{ exists: boolean; needs_onboarding: boolean }>(
       "/auth/check",
       { method: "POST", body: JSON.stringify({ phone }) },
     ),
 
-  // auth - signup (new users)
-  signupRequest: (data: {
-    phone: string;
-    name: string;
-    dob?: string;
-    gender?: string;
-    city?: string;
-    address?: string;
-  }) =>
-    request<{ requestId: string; expiresInSec: number; devCode?: string }>(
-      "/auth/signup",
-      { method: "POST", body: JSON.stringify(data) },
-    ),
-  signupVerify: (phone: string, code: string) =>
-    request<{ token: string; isNewUser: boolean; patient: PatientProfile }>(
-      "/auth/signup/verify",
-      { method: "POST", body: JSON.stringify({ phone, code }) },
-    ),
-
-  // auth - login (existing users)
-  loginRequest: (phone: string) =>
-    request<{ requestId: string; expiresInSec: number; devCode?: string }>(
-      "/auth/login",
-      { method: "POST", body: JSON.stringify({ phone }) },
-    ),
-  loginVerify: (phone: string, code: string) =>
-    request<{ token: string; isNewUser: boolean; patient: PatientProfile }>(
-      "/auth/login/verify",
-      { method: "POST", body: JSON.stringify({ phone, code }) },
-    ),
-
-  // legacy endpoints (for backward compatibility)
+  // auth - request OTP (works for both signup and login)
   otpRequest: (phone: string) =>
-    request<{ requestId: string; expiresInSec: number; devCode: string }>(
+    request<{ request_id: number; expires_in_sec: number; dev_code?: string }>(
       "/auth/otp/request",
       { method: "POST", body: JSON.stringify({ phone }) },
     ),
+  
+  // auth - verify OTP (creates user if new, logs in if existing)
   otpVerify: (phone: string, code: string) =>
-    request<{ access_token: string; refresh_token: string; token_type: string; access_expires_at: number; is_new_user: boolean }>(
+    request<{ 
+      access_token: string; 
+      refresh_token: string; 
+      token_type: string; 
+      access_expires_at: number; 
+      is_new_user: boolean 
+    }>(
       "/auth/otp/verify",
       { method: "POST", body: JSON.stringify({ phone, code }) },
     ),

@@ -18,6 +18,68 @@ class OtpVerifyIn(BaseModel):
     code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
 
 
+class PhoneCheckIn(BaseModel):
+    phone: str = Field(pattern=r"^\+?[0-9\s-]{10,17}$")
+
+
+class PhoneCheckOut(BaseModel):
+    exists: bool
+    needs_onboarding: bool = False
+
+
+class SignupIn(BaseModel):
+    phone: str = Field(pattern=r"^\+?[0-9\s-]{10,17}$")
+    name: str = Field(min_length=2, max_length=120)
+    dob: str | None = Field(default=None, pattern=r"^\d{2}/\d{2}/\d{4}$")
+    gender: str | None = Field(default=None, pattern=r"^[FMO]$")
+    city: str | None = Field(default=None, max_length=80)
+    address: str | None = Field(default=None, max_length=320)
+
+
+class SignupOut(BaseModel):
+    request_id: int
+    expires_in_sec: int
+    dev_code: str | None = None  # sandbox only
+
+
+class SignupVerifyIn(BaseModel):
+    phone: str
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class SignupVerifyOut(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    access_expires_at: int
+    is_new_user: bool = True
+    patient: PatientOut
+
+
+class LoginIn(BaseModel):
+    phone: str = Field(pattern=r"^\+?[0-9\s-]{10,17}$")
+
+
+class LoginOut(BaseModel):
+    request_id: int
+    expires_in_sec: int
+    dev_code: str | None = None  # sandbox only
+
+
+class LoginVerifyIn(BaseModel):
+    phone: str
+    code: str = Field(min_length=6, max_length=6, pattern=r"^\d{6}$")
+
+
+class LoginVerifyOut(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    access_expires_at: int
+    is_new_user: bool = False
+    patient: PatientOut
+
+
 class TokenOut(BaseModel):
     access_token: str
     refresh_token: str

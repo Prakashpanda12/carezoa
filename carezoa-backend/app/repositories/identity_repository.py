@@ -34,8 +34,26 @@ async def get_patient_by_user(session: AsyncSession, user_id: int) -> PatientPro
     return res.scalar_one_or_none()
 
 
-async def create_patient_profile(session: AsyncSession, *, user_id: int) -> PatientProfile:
-    profile = PatientProfile(user_id=user_id)
+async def create_patient_profile(
+    session: AsyncSession, 
+    *, 
+    user_id: int,
+    name: str = "",
+    dob: str | None = None,
+    gender: str | None = None,
+    city: str | None = None,
+    address: str | None = None,
+    onboarding_done: bool = False
+) -> PatientProfile:
+    profile = PatientProfile(
+        user_id=user_id,
+        name=name,
+        dob=dob or "",
+        gender=gender or "",
+        city=city or "",
+        address=address or "",
+        onboarding_done=onboarding_done
+    )
     session.add(profile)
     await session.flush()
     return profile

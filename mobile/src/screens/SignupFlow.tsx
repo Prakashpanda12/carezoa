@@ -28,8 +28,6 @@ import { Button, Field, Card, cx } from "../components/ui";
 
 type SignupStep = "welcome" | "phone" | "details" | "otp" | "terms" | "success";
 
-const STEPS: SignupStep[] = ["welcome", "phone", "details", "otp", "terms", "success"];
-
 export function SignupFlow() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -40,6 +38,7 @@ export function SignupFlow() {
   const [step, setStep] = useState<SignupStep>("welcome");
   const [phone, setPhone] = useState("");
   const [isNewUser, setIsNewUser] = useState<boolean | null>(null);
+  const [collectedDetails, setCollectedDetails] = useState<ProfileSetupForm | null>(null);
   const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState("");
   const [loadingMessage, setLoadingMessage] = useState("");
@@ -73,9 +72,9 @@ export function SignupFlow() {
       setIsNewUser(!checkResult.exists);
       
       if (checkResult.exists) {
-        // Existing user - request login OTP directly
+        // Existing user - request OTP directly
         setLoadingMessage("Sending verification code...");
-        await api.loginRequest(normalizedPhone);
+        await api.otpRequest(normalizedPhone);
         setStep("otp");
       } else {
         // New user - collect details first
@@ -89,20 +88,16 @@ export function SignupFlow() {
     }
   });
 
-  // Step 2: Collect details (new users only) and request signup OTP
+  // Step 2: Collect details (new users only) and request OTP
   const handleDetailsSubmit = detailsForm.handleSubmit(async (v) => {
     setBusy(true);
     setServerError("");
     try {
+      // Store details for later use
+      setCollectedDetails(v);
+      
       setLoadingMessage("Sending verification code...");
-      await api.signupRequest({
-        phone,
-        name: v.name,
-        dob: v.dob || undefined,
-        gender: v.gender || undefined,
-        city: v.city || undefined,
-        address: v.address || undefined,
-      });
+      await api.otpRequest(phone);
       setStep("otp");
     } catch (e) {
       setServerError(e instanceof Error ? e.message : "Failed to send OTP");
@@ -118,20 +113,29 @@ export function SignupFlow() {
     setServerError("");
     setLoadingMessage("Verifying your code...");
     try {
-      const result = isNewUser
-        ? await api.signupVerify(phone, v.code)
-        : await api.loginVerify(phone, v.code);
+      const result = await api.otpVerify(phone, v.code);
       
       setLoadingMessage("Setting up your account...");
-      await setSession(result.token, result.patient);
-      setPatient(result.patient);
+      await setSession(result.access_token, null);
+      
+      // Fetch profile
+      const profile = await api.getProfile();
+      
+      // If new user and we collected details, update profile now
+      if (isNewUser && collectedDetails) {
+        setLoadingMessage("Saving your details...");
+        const updatedProfile = await api.patchProfile(collectedDetails);
+        setPatient(updatedProfile);
+      } else {
+        setPatient(profile);
+      }
       
       // Check if onboarding is complete
-      if (result.patient.onboardingDone) {
+      if (profile.onboarding_done || (isNewUser && collectedDetails?.name && collectedDetails?.dob && collectedDetails?.gender)) {
         setStep("terms");
       } else {
-        // Shouldn't happen with new flow, but handle it
-        setStep("terms");
+        // Need to complete profile setup
+        setStep("details");
       }
     } catch (e) {
       setServerError(e instanceof Error ? e.message : "Verification failed");
@@ -154,26 +158,25 @@ export function SignupFlow() {
   };
 
   const goBack = () => {
-    const currentIndex = STEPS.indexOf(step);
-    if (currentIndex > 0) {
-      const prevStep = STEPS[currentIndex - 1];
-      setStep(prevStep);
-      setServerError("");
-      
-      // Reset forms when going back
-      if (step === "otp" && prevStep === "details") {
-        otpForm.reset({ code: "" });
-      } else if (step === "details" && prevStep === "phone") {
-        detailsForm.reset();
-        setPhone("");
-        setIsNewUser(null);
-      } else if (step === "otp" && prevStep === "phone") {
-        // Existing user going back from OTP to phone
-        otpForm.reset({ code: "" });
-        setPhone("");
-        setIsNewUser(null);
+    if (step === "otp") {
+      if (isNewUser) {
+        setStep("details");
+      } else {
+        setStep("phone");
       }
+      otpForm.reset({ code: "" });
+    } else if (step === "details") {
+      setStep("phone");
+      detailsForm.reset();
+      setPhone("");
+      setIsNewUser(null);
+    } else if (step === "phone") {
+      setStep("welcome");
+      phoneForm.reset({ phone: "+91" });
+    } else if (step === "terms") {
+      setStep("otp");
     }
+    setServerError("");
   };
 
   // Auto-format DOB as DD/MM/YYYY while typing
@@ -199,12 +202,6 @@ export function SignupFlow() {
           <Text className="ml-3 text-[16px] font-semibold text-ink">
             {isNewUser === false ? "Sign In" : t("signup.createAccount")}
           </Text>
-          {/* Progress indicator */}
-          <View className="ml-auto">
-            <Text className="text-[12px] text-soft">
-              Step {STEPS.indexOf(step)} of {STEPS.length - 2}
-            </Text>
-          </View>
         </View>
       )}
 
