@@ -1,7 +1,6 @@
 /**
  * OTP Service for phone number verification
- * In production, use Redis or database for distributed storage
- * For now, using in-memory storage (single server only)
+ * Enhanced to store user details during signup process
  */
 
 interface OtpRecord {
@@ -9,6 +8,15 @@ interface OtpRecord {
   code: string;
   expiresAt: number;
   attempts: number;
+  // Store user details during signup (before account creation)
+  signupData?: {
+    name: string;
+    dob?: string;
+    gender?: string;
+    city?: string;
+    address?: string;
+  };
+  purpose: 'login' | 'signup'; // Distinguish between login and signup
 }
 
 // In-memory storage (use Redis in production)
@@ -32,24 +40,36 @@ export function generateOtp(): string {
 }
 
 /**
- * Store OTP for a phone number
- * Returns the generated OTP (for dev mode - in production, send via SMS)
+ * Store OTP for signup (with user details)
  */
-export function createOtp(phone: string): { code: string; expiresInSec: number; requestId: string } {
-  // Normalize phone number
+export function createSignupOtp(
+  phone: string,
+  signupData: {
+    name: string;
+    dob?: string;
+    gender?: string;
+    city?: string;
+    address?: string;
+  }
+): { code: string; expiresInSec: number; requestId: string } {
   const normalizedPhone = phone.replace(/[\s-]/g, '');
   
-  // Generate new OTP
+  // Validate required fields
+  if (!signupData.name || signupData.name.trim().length < 2) {
+    throw new Error('Name is required (minimum 2 characters)');
+  }
+  
   const code = generateOtp();
   const expiresAt = Date.now() + (OTP_EXPIRY_SECONDS * 1000);
   const requestId = `otp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   
-  // Store OTP
   otpStore.set(normalizedPhone, {
     phone: normalizedPhone,
     code,
     expiresAt,
     attempts: 0,
+    signupData,
+    purpose: 'signup',
   });
   
   return {
@@ -60,41 +80,68 @@ export function createOtp(phone: string): { code: string; expiresInSec: number; 
 }
 
 /**
- * Verify OTP for a phone number
- * Returns true if valid, false otherwise
+ * Store OTP for login (no details needed)
  */
-export function verifyOtp(phone: string, code: string): { valid: boolean; error?: string } {
+export function createLoginOtp(phone: string): { code: string; expiresInSec: number; requestId: string } {
+  const normalizedPhone = phone.replace(/[\s-]/g, '');
+  
+  const code = generateOtp();
+  const expiresAt = Date.now() + (OTP_EXPIRY_SECONDS * 1000);
+  const requestId = `otp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  
+  otpStore.set(normalizedPhone, {
+    phone: normalizedPhone,
+    code,
+    expiresAt,
+    attempts: 0,
+    purpose: 'login',
+  });
+  
+  return {
+    code,
+    expiresInSec: OTP_EXPIRY_SECONDS,
+    requestId,
+  };
+}
+
+/**
+ * Verify OTP and return stored signup data (if signup)
+ */
+export function verifyOtp(phone: string, code: string): { 
+  valid: boolean; 
+  error?: string;
+  signupData?: OtpRecord['signupData'];
+  purpose?: 'login' | 'signup';
+} {
   const normalizedPhone = phone.replace(/[\s-]/g, '');
   const record = otpStore.get(normalizedPhone);
   
-  // Check if OTP exists
   if (!record) {
     return { valid: false, error: 'OTP not found or expired' };
   }
   
-  // Check if expired
   if (Date.now() > record.expiresAt) {
     otpStore.delete(normalizedPhone);
     return { valid: false, error: 'OTP expired' };
   }
   
-  // Check attempts
   if (record.attempts >= MAX_ATTEMPTS) {
     otpStore.delete(normalizedPhone);
     return { valid: false, error: 'Too many attempts. Please request a new OTP' };
   }
   
-  // Increment attempts
   record.attempts++;
   
-  // Verify code
   if (record.code !== code) {
     return { valid: false, error: 'Incorrect OTP' };
   }
   
-  // Success - delete OTP (one-time use)
+  // Success - extract data before deleting
+  const signupData = record.signupData;
+  const purpose = record.purpose;
   otpStore.delete(normalizedPhone);
-  return { valid: true };
+  
+  return { valid: true, signupData, purpose };
 }
 
 /**
@@ -111,6 +158,24 @@ export function hasActiveOtp(phone: string): boolean {
   }
   
   return true;
+}
+
+/**
+ * Check if phone number exists in database
+ */
+export async function phoneExists(phone: string): Promise<boolean> {
+  const { db } = await import('@/db');
+  const { czPatients } = await import('@/db/schema');
+  const { eq } = await import('drizzle-orm');
+  
+  const normalizedPhone = phone.replace(/[\s-]/g, '');
+  const [existing] = await db
+    .select()
+    .from(czPatients)
+    .where(eq(czPatients.phone, normalizedPhone))
+    .limit(1);
+  
+  return !!existing;
 }
 
 /**
