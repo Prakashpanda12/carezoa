@@ -40,6 +40,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'READ_EXTERNAL_STORAGE',
       'WRITE_EXTERNAL_STORAGE',
     ],
+    config: {
+      googleMaps: {
+        apiKey: process.env.GOOGLE_MAPS_ANDROID_KEY ?? '',
+      },
+    },
   },
   web: {
     favicon: './assets/favicon.png',
