@@ -40,8 +40,31 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json",
     )
 
+    from fastapi.middleware.cors import CORSMiddleware
+
     app.add_exception_handler(DomainError, domain_error_handler)
     app.add_exception_handler(Exception, unexpected_error_handler)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://localhost:5173",
+            "http://localhost:5174",
+            "http://localhost:8001",
+            "http://localhost:8081",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+            "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174",
+            "http://127.0.0.1:8001",
+            "http://127.0.0.1:8081"
+        ],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     try:  # OpenTelemetry tracing — soft integration
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor

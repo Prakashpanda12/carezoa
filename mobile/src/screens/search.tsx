@@ -58,10 +58,10 @@ export function SearchServices() {
       )}
 
       {providers.isLoading && <LoadingState />}
-      {providers.data && providers.data.items.length === 0 && (
+      {providers?.data && providers?.data?.items.length === 0 && (
         <EmptyState icon="search" title="No matches" body="Try a different name, specialty or service." />
       )}
-      {providers.data?.items.map((p) => (
+      {providers?.data?.items?.map((p) => (
         <ProviderCard
           key={p.id}
           provider={p}
@@ -92,7 +92,7 @@ export function ProviderList() {
         </Text>
       </View>
       {providers.isLoading && <LoadingState />}
-      {providers.data?.items.map((p) => (
+      {providers?.data?.items?.map((p) => (
         <ProviderCard
           key={p.id}
           provider={p}

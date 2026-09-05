@@ -19,12 +19,20 @@ from app.core.security import (
 )
 from app.db.session import get_session
 from app.repositories import identity_repository as repo
-from app.schemas.identity import OtpRequestIn, OtpRequestOut, OtpVerifyIn, TokenOut
+from app.schemas.identity import OtpRequestIn, OtpRequestOut, OtpVerifyIn, TokenOut, UserOut
 from app.services import notification_service
+from app.api.v1.deps import get_current_user
+from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 otp_limiter = SlidingWindowRateLimiter(limit=get_settings().rate_limit_otp_per_min, window_seconds=60)
 auth_limiter = SlidingWindowRateLimiter(limit=get_settings().rate_limit_auth_per_min, window_seconds=60)
+
+
+@router.get("/me", response_model=UserOut)
+async def get_me(user: User = Depends(get_current_user)):
+    return user
+
 
 
 @router.post("/otp/request", response_model=OtpRequestOut)
@@ -59,7 +67,7 @@ async def otp_verify(payload: OtpVerifyIn, request: Request, session: AsyncSessi
     auth_limiter.check(f"verify:{request.client.host if request.client else ''}")
 
     challenge = await repo.latest_otp_challenge(session, phone)
-    if challenge is None or challenge.expires_at < datetime.utcnow():
+    if challenge is None or challenge.expires_at < datetime.now(timezone.utc):
         raise OtpMismatchError("Code expired — request a new one")
     challenge.attempts += 1
     if challenge.attempts > 5:

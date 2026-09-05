@@ -15,7 +15,7 @@ import type {
 } from "../types/api";
 
 const DEFAULT_BASE =
-  Platform.OS === "android" ? "http://10.0.2.2:3000" : "http://localhost:3000";
+  Platform.OS === "android" ? "http://10.0.2.2:8000" : "http://localhost:8000";
 
 export const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? DEFAULT_BASE;
 const V1 = `${API_BASE}/api/v1`;
@@ -62,7 +62,7 @@ export const api = {
       { method: "POST", body: JSON.stringify({ phone }) },
     ),
   otpVerify: (phone: string, code: string) =>
-    request<{ token: string; isNewUser: boolean; patient: PatientProfile }>(
+    request<{ access_token: string; refresh_token: string; token_type: string; access_expires_at: number; is_new_user: boolean }>(
       "/auth/otp/verify",
       { method: "POST", body: JSON.stringify({ phone, code }) },
     ),

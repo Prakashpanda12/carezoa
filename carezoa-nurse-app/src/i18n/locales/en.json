@@ -1,0 +1,81 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "next": "Next",
+    "back": "Back",
+    "done": "Done",
+    "submit": "Submit",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "offline": "You are offline"
+  },
+  "auth": {
+    "login": "Login",
+    "phonePlaceholder": "Enter phone number",
+    "otpSent": "OTP sent to your phone",
+    "enterOtp": "Enter OTP",
+    "verify": "Verify",
+    "resend": "Resend OTP",
+    "devCode": "Dev code: {{code}}"
+  },
+  "onboarding": {
+    "welcome": "Welcome to Carezoa",
+    "step1_title": "Tell us about yourself",
+    "step2_title": "Services & Area",
+    "step3_title": "Upload Documents",
+    "step4_title": "Agreement",
+    "pending_approval": "Your application is under review"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "todaySchedule": "Today's Schedule",
+    "earningsThisWeek": "This Week",
+    "earningsThisMonth": "This Month",
+    "newRequests": "New Requests",
+    "noBookingsToday": "No bookings today",
+    "verificationStatus": "Verification Status"
+  },
+  "booking": {
+    "accept": "Accept",
+    "decline": "Decline",
+    "cancel": "Cancel",
+    "reschedule": "Reschedule",
+    "navigate": "Navigate",
+    "checkIn": "Check In",
+    "startService": "Start Service",
+    "completeService": "Complete",
+    "submitReport": "Submit Report",
+    "reportIncident": "Report Incident"
+  },
+  "visit": {
+    "enRoute": "En Route",
+    "arrived": "Arrived",
+    "enterOtp": "Enter OTP from patient",
+    "inService": "In Service",
+    "completed": "Visit Complete"
+  },
+  "earnings": {
+    "title": "Earnings",
+    "pending": "Pending",
+    "paid": "Paid",
+    "total": "Total"
+  },
+  "quality": {
+    "title": "Quality Scorecard",
+    "onTimeArrival": "On-Time Arrival",
+    "acceptanceRate": "Acceptance Rate",
+    "cancellationRate": "Cancellation Rate",
+    "patientRating": "Patient Rating",
+    "complaintRate": "Complaint Rate",
+    "reportCompletion": "Report Completion",
+    "repeatBooking": "Repeat Bookings",
+    "incidentRate": "Incident Rate"
+  }
+}

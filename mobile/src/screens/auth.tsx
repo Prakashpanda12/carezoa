@@ -127,8 +127,8 @@ export function PhoneOTPLogin() {
     setServerError("");
     try {
       const res = await api.otpVerify(phone.replace(/[\s-]/g, ""), v.code);
-      await setSession(res.token, res.patient);
-      router.replace(res.isNewUser ? "/(auth)/profile-setup" : "/(tabs)/home");
+      await setSession(res.access_token, null as any);
+      router.replace(res.is_new_user ? "/(auth)/profile-setup" : "/(tabs)/home");
     } catch (e) {
       setServerError(e instanceof Error ? e.message : "Verification failed");
     } finally {

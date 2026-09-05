@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useQueryClient } from "@tanstack/react-query";
-import * as Notifications from "expo-notifications";
+import { scheduleNotification } from "../utils/notifications";
 import { api } from "../api/client";
 import { keys, useBooking, useRecords } from "../api/hooks";
 import { can, useAuth } from "../store/auth";
@@ -103,16 +103,16 @@ export function VisitDetail() {
       const next = await api.simAdvance(id!);
       refresh();
       if (next.status !== before && next.status === "en_route") {
-        Notifications.scheduleNotificationAsync({
-          content: { title: "Your provider is on the way", body: `${next.provider?.name} has started for the visit.` },
-          trigger: null,
-        }).catch(() => {});
+        scheduleNotification(
+          "Your provider is on the way",
+          `${next.provider?.name} has started for the visit.`
+        ).catch(() => {});
       }
       if (next.status !== before && next.status === "completed") {
-        Notifications.scheduleNotificationAsync({
-          content: { title: "Visit completed", body: "The care report is ready in Records." },
-          trigger: null,
-        }).catch(() => {});
+        scheduleNotification(
+          "Visit completed",
+          "The care report is ready in Records."
+        ).catch(() => {});
         qc.invalidateQueries({ queryKey: keys.records });
       }
     } catch (e) {
