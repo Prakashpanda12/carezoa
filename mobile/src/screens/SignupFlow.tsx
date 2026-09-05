@@ -94,12 +94,14 @@ export function SignupFlow() {
     setServerError("");
     try {
       // Store details for later use
+      console.log("[SIGNUP] Details collected:", v);
       setCollectedDetails(v);
       
       setLoadingMessage("Sending verification code...");
       await api.otpRequest(phone);
       setStep("otp");
     } catch (e) {
+      console.error("[SIGNUP] Failed to send OTP:", e);
       setServerError(e instanceof Error ? e.message : "Failed to send OTP");
     } finally {
       setBusy(false);
@@ -118,26 +120,36 @@ export function SignupFlow() {
       setLoadingMessage("Setting up your account...");
       await setSession(result.access_token, null);
       
-      // Fetch profile
-      const profile = await api.getProfile();
-      
       // If new user and we collected details, update profile now
       if (isNewUser && collectedDetails) {
         setLoadingMessage("Saving your details...");
-        const updatedProfile = await api.patchProfile(collectedDetails);
-        setPatient(updatedProfile);
+        try {
+          console.log("[SIGNUP] Updating profile with:", collectedDetails);
+          const updatedProfile = await api.patchProfile(collectedDetails);
+          console.log("[SIGNUP] Profile updated successfully:", updatedProfile);
+          setPatient(updatedProfile);
+          setStep("terms");
+        } catch (profileError) {
+          console.error("[SIGNUP] Failed to update profile:", profileError);
+          // If profile update fails, fetch the empty profile and show details form again
+          const profile = await api.getProfile();
+          setPatient(profile);
+          setServerError("Failed to save your details. Please try again.");
+          setStep("details");
+        }
       } else {
+        // Existing user or no details collected
+        const profile = await api.getProfile();
         setPatient(profile);
-      }
-      
-      // Check if onboarding is complete
-      if (profile.onboarding_done || (isNewUser && collectedDetails?.name && collectedDetails?.dob && collectedDetails?.gender)) {
-        setStep("terms");
-      } else {
-        // Need to complete profile setup
-        setStep("details");
+        
+        if (profile.onboarding_done) {
+          setStep("terms");
+        } else {
+          setStep("details");
+        }
       }
     } catch (e) {
+      console.error("[SIGNUP] OTP verification failed:", e);
       setServerError(e instanceof Error ? e.message : "Verification failed");
     } finally {
       setBusy(false);
