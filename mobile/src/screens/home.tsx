@@ -77,7 +77,7 @@ export function Home() {
       </Text>
       <View className="mb-6 flex-row flex-wrap gap-2.5">
         {services.data.items.slice(0, 6).map((s) => (
-          <View key={s.id} style={{ width: "31.5%" }}>
+          <View key={s.id} style={{ width: "30%" }}>
             <ServiceTile
               service={s}
               onPress={() =>
@@ -140,14 +140,14 @@ export function Home() {
       ))}
 
       {/* plans teaser */}
-      <TouchableOpacity onPress={() => router.push("/packages")} activeOpacity={0.9}>
+      <TouchableOpacity onPress={() => router.push("/packages")} activeOpacity={0.9} accessibilityLabel={t("home.plans")} accessibilityRole="button">
         <View className="mt-2 flex-row items-center gap-3 rounded-xl3 bg-brand-soft p-4">
           <View className="h-11 w-11 items-center justify-center rounded-2xl bg-brand">
             <Ionicons name="repeat" size={19} color="#fff" />
           </View>
           <View className="flex-1">
             <Text className="text-[14px] font-bold text-brand-dark">{t("home.plans")}</Text>
-            <Text className="text-[12px] text-brand-dark/70">Save up to 20% with monthly plans</Text>
+            <Text className="text-[12px] text-brand-dark/70">{t("home.plansSubtitle")}</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color="#0E7C7B" />
         </View>

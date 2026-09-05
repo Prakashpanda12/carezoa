@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,7 +17,19 @@ export function SearchServices() {
   const { t } = useTranslation();
   const router = useRouter();
   const [q, setQ] = useState("");
-  const providers = useProviders(q || undefined);
+  // BUG-M06 fix: debounce search input by 300ms
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedQ(q), 300);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [q]);
+
+  const providers = useProviders(debouncedQ || undefined);
   const services = useServices();
 
   return (
@@ -33,9 +45,11 @@ export function SearchServices() {
           placeholderTextColor="#9AA5A2"
           className="flex-1 text-[14px] text-ink"
           testID="search-input"
+          accessibilityLabel="Search for providers or services"
+          returnKeyType="search"
         />
         {!!q && (
-          <TouchableOpacity onPress={() => setQ("")}>
+          <TouchableOpacity onPress={() => setQ("")} accessibilityLabel="Clear search" accessibilityRole="button">
             <Ionicons name="close-circle" size={17} color="#9AA5A2" />
           </TouchableOpacity>
         )}
@@ -50,6 +64,8 @@ export function SearchServices() {
                 router.push({ pathname: "/providers", params: { serviceId: s.id, serviceName: s.name } })
               }
               className="rounded-full border border-line bg-card px-4 py-2"
+              accessibilityLabel={`Browse ${s.name} providers`}
+              accessibilityRole="button"
             >
               <Text className="text-[12.5px] font-semibold text-soft">{s.name}</Text>
             </TouchableOpacity>

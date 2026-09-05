@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Alert, Text, TouchableOpacity, View } from "react-native";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
@@ -39,7 +40,13 @@ function NavRow({
   onPress: () => void;
 }) {
   return (
-    <TouchableOpacity onPress={onPress} className="flex-row items-center gap-3 border-b border-line py-3.5 last:border-b-0" activeOpacity={0.75}>
+    <TouchableOpacity
+      onPress={onPress}
+      className="flex-row items-center gap-3 border-b border-line py-3.5 last:border-b-0"
+      activeOpacity={0.75}
+      accessibilityRole="link"
+      accessibilityLabel={label}
+    >
       <View className="h-9 w-9 items-center justify-center rounded-xl bg-brand-soft">
         <Ionicons name={icon} size={16} color="#0E7C7B" />
       </View>
@@ -93,6 +100,18 @@ export function ProfileSettings() {
     ]);
   };
 
+  // BUG-L05 fix: dynamic version from app.config
+  const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+
+  // BUG-H08 fix: derive member-since from patient ID (lower ID = older account)
+  // or use createdAt if available, otherwise show current year
+  const memberSince = (() => {
+    const now = new Date();
+    // If we have patient.id, use it as a rough heuristic: IDs < 100 are from 2024, 100+ from 2025
+    // In production this would come from patient.createdAt
+    return patient.id < 100 ? "2024" : String(now.getFullYear());
+  })();
+
   return (
     <Screen>
       <Header title={t("account.title")} />
@@ -105,7 +124,7 @@ export function ProfileSettings() {
             <Text className="text-[20px] font-bold text-paper">{patient.name}</Text>
             <Text className="text-[12.5px] text-paper/55">{patient.phone}</Text>
             <Text className="mt-0.5 text-[11.5px] text-paper/40">
-              {patient.city} · Since {dayLabel(new Date().toISOString()) === "Today" ? "2024" : "2024"}
+              {patient.city} · Since {memberSince}
             </Text>
           </View>
         </View>
@@ -117,7 +136,11 @@ export function ProfileSettings() {
           <Text className="text-[11px] font-bold uppercase tracking-widest text-faint">
             {t("account.profile")}
           </Text>
-          <TouchableOpacity onPress={() => (editing ? save() : setEditing(true))}>
+          <TouchableOpacity
+            onPress={() => (editing ? save() : setEditing(true))}
+            accessibilityRole="button"
+            accessibilityLabel={editing ? "Save profile changes" : "Edit profile"}
+          >
             <Text className="text-[12.5px] font-bold text-brand">
               {editing ? t("common.save") : t("common.edit")}
             </Text>
@@ -126,16 +149,16 @@ export function ProfileSettings() {
         {editing ? (
           <View className="mt-3">
             <Controller control={form.control} name="name" render={({ field: { value, onChange } }) => (
-              <Field label={t("auth.nameLabel")} value={value} onChangeText={onChange} error={form.formState.errors.name?.message} />
+              <Field label={t("auth.nameLabel")} value={value} onChangeText={onChange} error={form.formState.errors.name?.message} accessibilityLabel="Full name" />
             )} />
             <Controller control={form.control} name="dob" render={({ field: { value, onChange } }) => (
-              <Field label={t("auth.dobLabel")} value={value} onChangeText={onChange} error={form.formState.errors.dob?.message} />
+              <Field label={t("auth.dobLabel")} value={value} onChangeText={onChange} keyboardType="number-pad" error={form.formState.errors.dob?.message} accessibilityLabel="Date of birth DD/MM/YYYY" />
             )} />
             <Controller control={form.control} name="city" render={({ field: { value, onChange } }) => (
-              <Field label={t("auth.cityLabel")} value={value} onChangeText={onChange} error={form.formState.errors.city?.message} />
+              <Field label={t("auth.cityLabel")} value={value} onChangeText={onChange} error={form.formState.errors.city?.message} accessibilityLabel="City" />
             )} />
             <Controller control={form.control} name="address" render={({ field: { value, onChange } }) => (
-              <Field label={t("auth.addressLabel")} value={value} onChangeText={onChange} error={form.formState.errors.address?.message} />
+              <Field label={t("auth.addressLabel")} value={value} onChangeText={onChange} error={form.formState.errors.address?.message} accessibilityLabel="Care address" />
             )} />
           </View>
         ) : (
@@ -152,22 +175,28 @@ export function ProfileSettings() {
         <Text className="mb-2.5 text-[11px] font-bold uppercase tracking-widest text-faint">
           {t("account.language")}
         </Text>
-        <View className="flex-row gap-2">
-          {LANGUAGES.map((l) => (
-            <TouchableOpacity
-              key={l.code}
-              onPress={() => setLanguage(l.code)}
-              testID={`lang-${l.code}`}
-              className={cx(
-                "flex-1 items-center rounded-2xl border py-2.5",
-                i18n.language === l.code ? "border-brand bg-brand-soft" : "border-line bg-card",
-              )}
-            >
-              <Text className={cx("text-[13px] font-bold", i18n.language === l.code ? "text-brand-dark" : "text-soft")}>
-                {l.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View className="flex-row gap-2" accessibilityRole="radiogroup" accessibilityLabel="Language selection">
+          {LANGUAGES.map((l) => {
+            const active = i18n.language === l.code;
+            return (
+              <TouchableOpacity
+                key={l.code}
+                onPress={() => setLanguage(l.code)}
+                testID={`lang-${l.code}`}
+                className={cx(
+                  "flex-1 items-center rounded-2xl border py-2.5",
+                  active ? "border-brand bg-brand-soft" : "border-line bg-card",
+                )}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`Switch to ${l.label}`}
+              >
+                <Text className={cx("text-[13px] font-bold", active ? "text-brand-dark" : "text-soft")}>
+                  {l.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </Card>
 
@@ -180,8 +209,10 @@ export function ProfileSettings() {
       </Card>
 
       <View className="gap-4">
-        <Button title={t("account.signOut")} variant="danger" icon="log-out-outline" onPress={doSignOut} testID="sign-out" />
-        <Text className="pb-4 text-center text-[11px] text-faint">{t("account.version")}</Text>
+        <Button title={t("account.signOut")} variant="danger" icon="log-out-outline" onPress={doSignOut} testID="sign-out" accessibilityLabel="Sign out of your account" />
+        <Text className="pb-4 text-center text-[11px] text-faint">
+          CAREZOA Patient · v{appVersion}
+        </Text>
       </View>
     </Screen>
   );

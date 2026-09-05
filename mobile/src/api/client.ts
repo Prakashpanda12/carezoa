@@ -25,6 +25,15 @@ export function setAuthToken(token: string | null) {
   authToken = token;
 }
 
+/**
+ * Callback invoked when the API returns 401 (token expired).
+ * The auth store wires this up to clear the session and redirect to login.
+ */
+let onUnauthorized: (() => void) | null = null;
+export function setOnUnauthorized(cb: () => void) {
+  onUnauthorized = cb;
+}
+
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${V1}${path}`, {
     ...init,
@@ -34,9 +43,25 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...(init?.headers ?? {}),
     },
   });
+
+  // BUG-C03 fix: handle token expiry / unauthorized
+  if (res.status === 401) {
+    onUnauthorized?.();
+    throw new ApiError(401, "Session expired. Please sign in again.");
+  }
+
   if (!res.ok) {
+    // SEC-012 fix: don't leak server error details to users
     const body = await res.json().catch(() => null);
-    throw new ApiError(res.status, body?.error ?? `Request failed (${res.status})`);
+    const userMessage =
+      res.status === 404
+        ? "Resource not found."
+        : res.status === 403
+          ? "You don't have permission for this action."
+          : res.status >= 500
+            ? "Server error. Please try again shortly."
+            : body?.error ?? `Request failed. Please try again.`;
+    throw new ApiError(res.status, userMessage);
   }
   return (await res.json()) as T;
 }

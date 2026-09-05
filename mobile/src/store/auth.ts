@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
-import { setAuthToken } from "../api/client";
+import { setAuthToken, setOnUnauthorized } from "../api/client";
 import type { FamilyMember, PatientProfile } from "../types/api";
 
 const TOKEN_KEY = "carezoa.token";
@@ -17,7 +17,7 @@ interface AuthState {
   patient: PatientProfile | null;
   viewer: ViewerMode | null;
   hydrate: () => Promise<void>;
-  setSession: (token: string, patient: PatientProfile) => Promise<void>;
+  setSession: (token: string, patient: PatientProfile | null) => Promise<void>;
   setPatient: (p: PatientProfile) => void;
   setViewer: (v: ViewerMode | null) => void;
   signOut: () => Promise<void>;
@@ -66,6 +66,11 @@ export const useAuth = create<AuthState>((set, get) => ({
     set({ token: null, patient: null, viewer: null });
   },
 }));
+
+// BUG-C03 fix: wire up 401 handler so expired tokens trigger sign-out
+setOnUnauthorized(() => {
+  useAuth.getState().signOut();
+});
 
 /** Whether a viewer-mode member is allowed a capability (API-granted scope). */
 export function can(viewer: ViewerMode | null, cap: keyof ViewerMode["accessScope"]) {

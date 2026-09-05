@@ -258,10 +258,25 @@ export function Payment() {
     }
   };
 
+  // BUG-C05 fix: robust deep link intercept that handles both custom scheme
+  // and http(s) fallback URLs that some OEM browsers may redirect through
   const intercept = (nav: WebViewNavigation): boolean => {
-    // The sandbox gateway redirects to carezoa://payment/<result>?bookingId=…
-    if (nav.url.startsWith("carezoa://")) {
-      const ok = nav.url.includes("/payment/success");
+    const url = nav.url;
+    // Custom scheme deep link
+    if (url.startsWith("carezoa://")) {
+      const ok = url.includes("/payment/success");
+      setCheckoutUrl(null);
+      qc.invalidateQueries();
+      if (ok) {
+        router.replace({ pathname: "/payment-success", params: { bookingId: bookingId! } });
+      } else {
+        setFailed(true);
+      }
+      return false;
+    }
+    // HTTP fallback that some payment gateways use
+    if (url.includes("carezoa") && url.includes("/payment/")) {
+      const ok = url.includes("/payment/success");
       setCheckoutUrl(null);
       qc.invalidateQueries();
       if (ok) {
@@ -280,12 +295,20 @@ export function Payment() {
         <WebView
           source={{ uri: checkoutUrl }}
           onShouldStartLoadWithRequest={intercept}
+          onNavigationStateChange={(nav) => {
+            // BUG-C05 fix: also check navigation state changes as fallback
+            intercept(nav as unknown as WebViewNavigation);
+          }}
           startInLoadingState
           javaScriptEnabled
+          domStorageEnabled
+          originWhitelist={["https://*", "http://*", "carezoa://*"]}
         />
         <TouchableOpacity
           onPress={() => setCheckoutUrl(null)}
           className="absolute right-4 top-14 rounded-full bg-white/15 px-4 py-2"
+          accessibilityLabel="Close checkout and return to payment"
+          accessibilityRole="button"
         >
           <Text className="text-[12px] font-bold text-white">{t("common.back")}</Text>
         </TouchableOpacity>

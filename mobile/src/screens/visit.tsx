@@ -58,7 +58,7 @@ export function VisitDetail() {
         ],
       );
     } catch (e) {
-      Alert.alert("Couldn't start call", e instanceof Error ? e.message : "");
+      Alert.alert("Couldn't start call", "Please try again later.");
     }
   };
 
@@ -73,7 +73,7 @@ export function VisitDetail() {
             await api.patchBooking(id!, { action: "cancel" });
             refresh();
           } catch (e) {
-            Alert.alert("Couldn't cancel", e instanceof Error ? e.message : "");
+            Alert.alert("Couldn't cancel", "Please try again later.");
           }
         },
       },
@@ -90,7 +90,7 @@ export function VisitDetail() {
       await api.patchBooking(id!, { action: "reschedule", startsAt: d.toISOString() });
       refresh();
     } catch (e) {
-      Alert.alert("Couldn't reschedule", e instanceof Error ? e.message : "");
+      Alert.alert("Couldn't reschedule", "Please try again later.");
     } finally {
       setBusy(false);
     }
@@ -116,7 +116,7 @@ export function VisitDetail() {
         qc.invalidateQueries({ queryKey: keys.records });
       }
     } catch (e) {
-      Alert.alert("Simulator", e instanceof Error ? e.message : "");
+      Alert.alert("Simulator", "Could not advance visit status.");
     } finally {
       setBusy(false);
     }
@@ -136,6 +136,9 @@ export function VisitDetail() {
   const live = ["en_route", "checked_in", "in_service"].includes(b.status);
   const canCancel = ["scheduled", "confirmed"].includes(b.status);
   const completed = b.status === "completed";
+  const cancelled = b.status === "cancelled";
+  // Unified: show bottom rail for ALL actionable states, but with correct actions
+  const showBottomRail = canCancel || live || completed;
 
   return (
     <View className="flex-1 bg-paper">
@@ -147,7 +150,7 @@ export function VisitDetail() {
           <StatusChip status={b.status} t={t} />
           {live && <Chip tone="brand" icon="pulse" label="LIVE" />}
         </View>
-        {b.status !== "cancelled" && <OTPHint otp={b.checkinOtp} t={t} />}
+        {!cancelled && <OTPHint otp={b.checkinOtp} t={t} />}
 
         {/* provider + actions */}
         <Card className="mt-4">
@@ -158,14 +161,14 @@ export function VisitDetail() {
               <Text className="text-[12px] text-soft">{b.provider?.title}</Text>
             </View>
           </View>
-          {!completed && b.status !== "cancelled" && (
+          {!completed && !cancelled && (
             <View className="mt-3 flex-row gap-2">
               <View className="flex-1">
-                <Button title={t("visit.callVia")} small icon="call" variant="secondary" onPress={maskedCall} testID="masked-call" />
+                <Button title={t("visit.callVia")} small icon="call" variant="secondary" onPress={maskedCall} testID="masked-call" accessibilityLabel="Call provider via masked relay" />
               </View>
               {(!viewer || can(viewer, "chat")) && (
                 <View className="flex-1">
-                  <Button title={t("visit.messageProvider")} small icon="chatbox-ellipses" variant="ghost" onPress={() => router.push(`/chat/${b.id}`)} />
+                  <Button title={t("visit.messageProvider")} small icon="chatbox-ellipses" variant="ghost" onPress={() => router.push(`/chat/${b.id}`)} accessibilityLabel="Send message to provider" />
                 </View>
               )}
             </View>
@@ -208,7 +211,7 @@ export function VisitDetail() {
                   <View className="flex-row flex-wrap gap-2">
                     {Object.entries(record.vitals).map(([k, v]) => (
                       <View key={k} className="rounded-xl bg-brand-soft px-3 py-2">
-                        <Text className="text-[10px] font-bold text-brand-dark/70">{k}</Text>
+                        <Text className="text-[11px] font-bold text-brand-dark/70">{k}</Text>
                         <Text className="text-[13px] font-bold text-brand-dark">{v}</Text>
                       </View>
                     ))}
@@ -219,28 +222,10 @@ export function VisitDetail() {
             </Card>
           </>
         )}
-
-        {/* BOOK AGAIN — first-class retention flow */}
-        {completed && (
-          <TouchableOpacity onPress={bookAgain} activeOpacity={0.9} testID="book-again">
-            <View className="mt-6 flex-row items-center gap-3 rounded-xl3 bg-brand p-4.5">
-              <View className="h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
-                <Ionicons name="repeat" size={19} color="#fff" />
-              </View>
-              <View className="flex-1">
-                <Text className="text-[15px] font-bold text-white">{t("common.bookAgain")}</Text>
-                <Text className="text-[12px] text-white/75">
-                  Same provider · {b.provider?.name} · prefilled
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={17} color="#fff" />
-            </View>
-          </TouchableOpacity>
-        )}
       </ScrollView>
 
-      {/* bottom action rail */}
-      {(canCancel || b.status === "confirmed" || b.status === "scheduled") && (
+      {/* unified bottom action rail — only one renders based on status */}
+      {showBottomRail && (
         <View className="absolute inset-x-0 bottom-0 border-t border-line bg-card/95 px-5 pb-8 pt-3">
           {showReschedule ? (
             <View>
@@ -253,6 +238,7 @@ export function VisitDetail() {
                     key={`${o.dayIn}-${o.slot}`}
                     onPress={() => reschedule(o)}
                     className="rounded-xl border border-line bg-card px-3.5 py-2.5"
+                    accessibilityLabel={`Reschedule to ${o.dayIn === 1 ? "tomorrow" : "in 2 days"} at ${o.slot}`}
                   >
                     <Text className="text-[12.5px] font-bold text-ink">
                       {o.dayIn === 1 ? "Tomorrow" : "In 2 days"} · {o.slot}
@@ -261,30 +247,35 @@ export function VisitDetail() {
                 ))}
               </View>
             </View>
-          ) : (
+          ) : canCancel ? (
+            /* scheduled/confirmed: cancel, reschedule, simulate */
             <View className="flex-row gap-2">
-              {canCancel && (
-                <>
-                  <View className="flex-1">
-                    <Button title={t("visit.reschedule")} small variant="ghost" icon="calendar-outline" onPress={() => setShowReschedule(true)} />
-                  </View>
-                  <View className="flex-1">
-                    <Button title={t("visit.cancelVisit")} small variant="danger" icon="close" onPress={cancelVisit} />
-                  </View>
-                </>
-              )}
               <View className="flex-1">
-                <Button title={t("visit.simulate")} small variant="secondary" icon="play" loading={busy} onPress={simulate} testID="simulate-advance" />
+                <Button title={t("visit.reschedule")} small variant="ghost" icon="calendar-outline" onPress={() => setShowReschedule(true)} accessibilityLabel="Reschedule this visit" />
+              </View>
+              <View className="flex-1">
+                <Button title={t("visit.cancelVisit")} small variant="danger" icon="close" onPress={cancelVisit} accessibilityLabel="Cancel this visit" />
+              </View>
+              <View className="flex-1">
+                <Button title={t("visit.simulate")} small variant="secondary" icon="play" loading={busy} onPress={simulate} testID="simulate-advance" accessibilityLabel="Simulate visit status advance" />
               </View>
             </View>
-          )}
+          ) : live ? (
+            /* en_route / checked_in / in_service: simulate only */
+            <Button title={t("visit.simulate")} small variant="secondary" icon="play" loading={busy} onPress={simulate} testID="simulate-advance" accessibilityLabel="Simulate visit status advance" />
+          ) : completed ? (
+            /* completed: book again + simulate */
+            <View className="flex-row gap-2">
+              <View className="flex-[1.5]">
+                <Button title={t("common.bookAgain")} icon="repeat" onPress={bookAgain} testID="book-again" accessibilityLabel="Book this provider again with prefilled details" />
+              </View>
+              <View className="flex-1">
+                <Button title={t("visit.simulate")} small variant="secondary" icon="play" loading={busy} onPress={simulate} accessibilityLabel="Simulate visit status advance" />
+              </View>
+            </View>
+          ) : null}
         </View>
       )}
-      {live || completed ? (
-        <View className="absolute inset-x-0 bottom-0 border-t border-line bg-card/95 px-5 pb-8 pt-3">
-          <Button title={t("visit.simulate")} small variant="secondary" icon="play" loading={busy} onPress={simulate} />
-        </View>
-      ) : null}
     </View>
   );
 }
@@ -294,7 +285,7 @@ function DetailRow({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMa
     <View className="flex-row gap-3 border-b border-line py-2.5 last:border-b-0">
       <Ionicons name={icon} size={15} color="#9AA5A2" style={{ marginTop: 1 }} />
       <View className="flex-1">
-        <Text className="text-[10.5px] font-bold uppercase tracking-widest text-faint">{label}</Text>
+        <Text className="text-[11px] font-bold uppercase tracking-widest text-faint">{label}</Text>
         <Text className="mt-0.5 text-[13.5px] font-medium text-ink">{value}</Text>
       </View>
     </View>

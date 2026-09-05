@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   Text,
@@ -70,12 +71,22 @@ export function SignupFlow() {
     }
   });
 
+  // BUG-C04 fix: fetch profile immediately after OTP verify to avoid null patient
   const verifyOtp = otpForm.handleSubmit(async (v) => {
     setBusy(true);
     setServerError("");
     try {
       const res = await api.otpVerify(phone.replace(/[\s-]/g, ""), v.code);
-      await setSession(res.access_token, null as any);
+      // Fetch profile right away so we never have a session without patient data
+      let patient = null;
+      try {
+        // setSession first with null so token is set for subsequent API calls
+        await setSession(res.access_token, null);
+        patient = await api.getProfile();
+        setPatient(patient);
+      } catch {
+        // If profile fetch fails for a new user, that's OK — they'll fill it in the next step
+      }
       setStep("profile");
     } catch (e) {
       setServerError(e instanceof Error ? e.message : "Verification failed");
@@ -119,6 +130,14 @@ export function SignupFlow() {
     }
   };
 
+  // BUG-H05 fix: auto-format DOB as DD/MM/YYYY while typing
+  const formatDob = (text: string) => {
+    const digits = text.replace(/\D/g, "").slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+  };
+
   return (
     <KeyboardAvoidingView
       className="flex-1 bg-paper"
@@ -128,7 +147,7 @@ export function SignupFlow() {
       {/* Header with back button */}
       {step !== "welcome" && step !== "success" && (
         <View className="flex-row items-center px-4 py-3">
-          <TouchableOpacity onPress={goBack} className="p-2">
+          <TouchableOpacity onPress={goBack} className="p-2" accessibilityLabel="Go back to previous step" accessibilityRole="button">
             <Ionicons name="arrow-back" size={24} color="#0E7C7B" />
           </TouchableOpacity>
           <Text className="ml-3 text-[16px] font-semibold text-ink">
@@ -145,10 +164,10 @@ export function SignupFlow() {
         {/* Welcome Step */}
         {step === "welcome" && (
           <View className="flex-1 items-center justify-center pt-20">
-            <View className="h-28 w-28 items-center justify-center rounded-full bg-brand-soft">
+            <View className="h-28 w-28 items-center justify-center rounded-full bg-brand-soft" accessibilityLabel="Carezoa heart logo">
               <Ionicons name="heart" size={56} color="#0E7C7B" />
             </View>
-            <Text className="mt-8 text-center text-[32px] font-bold tracking-tight text-ink">
+            <Text className="mt-8 text-center text-[32px] font-bold tracking-tight text-ink" accessibilityRole="header">
               {t("signup.welcomeTitle")}
             </Text>
             <Text className="mt-3 text-center text-[15px] leading-relaxed text-soft">
@@ -159,8 +178,9 @@ export function SignupFlow() {
                 title={t("signup.getStarted")}
                 onPress={() => setStep("phone")}
                 testID="signup-get-started"
+                accessibilityLabel="Create a new account"
               />
-              <TouchableOpacity onPress={() => router.replace("/(auth)/login")}>
+              <TouchableOpacity onPress={() => router.replace("/(auth)/login")} accessibilityRole="link" accessibilityLabel="Sign in with existing account">
                 <Text className="text-center text-[14px] font-semibold text-brand">
                   {t("signup.alreadyHaveAccount")}
                 </Text>
@@ -175,7 +195,7 @@ export function SignupFlow() {
             <View className="h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft">
               <Ionicons name="call" size={24} color="#0E7C7B" />
             </View>
-            <Text className="mt-5 text-[26px] font-bold tracking-tight text-ink">
+            <Text className="mt-5 text-[26px] font-bold tracking-tight text-ink" accessibilityRole="header">
               {t("signup.phoneTitle")}
             </Text>
             <Text className="mt-1.5 text-[13.5px] text-soft">
@@ -196,6 +216,7 @@ export function SignupFlow() {
                     placeholder="+91 98765 43210"
                     error={phoneForm.formState.errors.phone?.message}
                     testID="signup-phone-input"
+                    accessibilityLabel="Phone number input"
                   />
                 )}
               />
@@ -203,7 +224,7 @@ export function SignupFlow() {
                 {t("auth.devCodeHint")}
               </Text>
               {!!serverError && (
-                <Text className="mb-3 text-[13px] font-semibold text-danger">
+                <Text className="mb-3 text-[13px] font-semibold text-danger" accessibilityRole="alert">
                   {serverError}
                 </Text>
               )}
@@ -212,6 +233,7 @@ export function SignupFlow() {
                 loading={busy}
                 onPress={sendOtp}
                 testID="signup-send-otp"
+                accessibilityLabel="Send verification code to phone number"
               />
             </View>
           </View>
@@ -223,7 +245,7 @@ export function SignupFlow() {
             <View className="h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft">
               <Ionicons name="lock-closed" size={24} color="#0E7C7B" />
             </View>
-            <Text className="mt-5 text-[26px] font-bold tracking-tight text-ink">
+            <Text className="mt-5 text-[26px] font-bold tracking-tight text-ink" accessibilityRole="header">
               {t("auth.otpTitle")}
             </Text>
             <Text className="mt-1.5 text-[13.5px] text-soft">
@@ -244,11 +266,12 @@ export function SignupFlow() {
                     placeholder="123456"
                     error={otpForm.formState.errors.code?.message}
                     testID="signup-otp-input"
+                    accessibilityLabel="6-digit verification code"
                   />
                 )}
               />
               {!!serverError && (
-                <Text className="mb-3 text-[13px] font-semibold text-danger">
+                <Text className="mb-3 text-[13px] font-semibold text-danger" accessibilityRole="alert">
                   {serverError}
                 </Text>
               )}
@@ -257,6 +280,7 @@ export function SignupFlow() {
                 loading={busy}
                 onPress={verifyOtp}
                 testID="signup-verify-otp"
+                accessibilityLabel="Verify OTP code"
               />
               <TouchableOpacity
                 onPress={() => {
@@ -264,6 +288,8 @@ export function SignupFlow() {
                   setServerError("");
                 }}
                 className="mt-4 items-center"
+                accessibilityRole="button"
+                accessibilityLabel="Go back to change phone number or resend code"
               >
                 <Text className="text-[13px] font-semibold text-brand">
                   {t("auth.resend")}
@@ -276,7 +302,7 @@ export function SignupFlow() {
         {/* Profile Step */}
         {step === "profile" && (
           <View className="pt-8">
-            <Text className="text-[26px] font-bold tracking-tight text-ink">
+            <Text className="text-[26px] font-bold tracking-tight text-ink" accessibilityRole="header">
               {t("auth.setupTitle")}
             </Text>
             <Text className="mt-1.5 text-[13.5px] text-soft">
@@ -295,6 +321,7 @@ export function SignupFlow() {
                     onChangeText={onChange}
                     error={profileForm.formState.errors.name?.message}
                     testID="signup-name"
+                    accessibilityLabel="Full name"
                   />
                 )}
               />
@@ -306,9 +333,11 @@ export function SignupFlow() {
                     label={t("auth.dobLabel")}
                     icon="calendar-outline"
                     value={value}
-                    onChangeText={onChange}
+                    onChangeText={(txt) => onChange(formatDob(txt))}
                     placeholder="14/09/1991"
+                    keyboardType="number-pad"
                     error={profileForm.formState.errors.dob?.message}
+                    accessibilityLabel="Date of birth in DD/MM/YYYY format"
                   />
                 )}
               />
@@ -316,7 +345,7 @@ export function SignupFlow() {
                 control={profileForm.control}
                 name="gender"
                 render={({ field: { value, onChange } }) => (
-                  <View className="mb-4">
+                  <View className="mb-4" accessibilityRole="radiogroup" accessibilityLabel="Gender selection">
                     <Text className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-faint">
                       {t("auth.genderLabel")}
                     </Text>
@@ -333,6 +362,9 @@ export function SignupFlow() {
                             "flex-1 items-center rounded-2xl border py-3",
                             value === g.value ? "border-brand bg-brand-soft" : "border-line bg-card"
                           )}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: value === g.value }}
+                          accessibilityLabel={g.label}
                         >
                           <Text
                             className={cx(
@@ -359,6 +391,7 @@ export function SignupFlow() {
                     onChangeText={onChange}
                     placeholder="Bhubaneswar"
                     error={profileForm.formState.errors.city?.message}
+                    accessibilityLabel="City"
                   />
                 )}
               />
@@ -373,11 +406,12 @@ export function SignupFlow() {
                     onChangeText={onChange}
                     multiline
                     error={profileForm.formState.errors.address?.message}
+                    accessibilityLabel="Care address"
                   />
                 )}
               />
               {!!serverError && (
-                <Text className="mb-3 text-[13px] font-semibold text-danger">
+                <Text className="mb-3 text-[13px] font-semibold text-danger" accessibilityRole="alert">
                   {serverError}
                 </Text>
               )}
@@ -385,6 +419,7 @@ export function SignupFlow() {
                 title={t("common.continue")}
                 loading={busy}
                 onPress={saveProfile}
+                accessibilityLabel="Save profile and continue"
               />
             </View>
           </View>
@@ -396,7 +431,7 @@ export function SignupFlow() {
             <View className="h-14 w-14 items-center justify-center rounded-2xl bg-brand-soft">
               <Ionicons name="document-text" size={24} color="#0E7C7B" />
             </View>
-            <Text className="mt-5 text-[26px] font-bold tracking-tight text-ink">
+            <Text className="mt-5 text-[26px] font-bold tracking-tight text-ink" accessibilityRole="header">
               {t("signup.termsTitle")}
             </Text>
             <Text className="mt-1.5 text-[13.5px] text-soft">
@@ -414,6 +449,9 @@ export function SignupFlow() {
             <TouchableOpacity
               onPress={() => setTermsAccepted(!termsAccepted)}
               className="mt-6 flex-row items-center"
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: termsAccepted }}
+              accessibilityLabel={t("signup.acceptTerms")}
             >
               <View
                 className={cx(
@@ -428,8 +466,20 @@ export function SignupFlow() {
               </Text>
             </TouchableOpacity>
 
+            {/* BUG-L01 fix: link to full terms */}
+            <TouchableOpacity
+              onPress={() => Linking.openURL("https://carezoa.com/terms").catch(() => {})}
+              className="mt-2 items-center"
+              accessibilityRole="link"
+              accessibilityLabel="View full terms on website"
+            >
+              <Text className="text-[12px] font-semibold text-brand">
+                View full terms on our website →
+              </Text>
+            </TouchableOpacity>
+
             {!!serverError && (
-              <Text className="mt-3 text-[13px] font-semibold text-danger">
+              <Text className="mt-3 text-[13px] font-semibold text-danger" accessibilityRole="alert">
                 {serverError}
               </Text>
             )}
@@ -439,6 +489,7 @@ export function SignupFlow() {
               onPress={completeSignup}
               disabled={!termsAccepted}
               className="mt-6"
+              accessibilityLabel="Complete registration"
             />
           </View>
         )}
@@ -446,10 +497,10 @@ export function SignupFlow() {
         {/* Success Step */}
         {step === "success" && (
           <View className="flex-1 items-center justify-center pt-20">
-            <View className="h-28 w-28 items-center justify-center rounded-full bg-green-100">
+            <View className="h-28 w-28 items-center justify-center rounded-full bg-green-100" accessibilityLabel="Success checkmark">
               <Ionicons name="checkmark-circle" size={56} color="#10B981" />
             </View>
-            <Text className="mt-8 text-center text-[28px] font-bold tracking-tight text-ink">
+            <Text className="mt-8 text-center text-[28px] font-bold tracking-tight text-ink" accessibilityRole="header">
               {t("signup.successTitle")}
             </Text>
             <Text className="mt-3 text-center text-[15px] leading-relaxed text-soft">
@@ -460,6 +511,7 @@ export function SignupFlow() {
                 title={t("signup.goToHome")}
                 onPress={finishSignup}
                 testID="signup-go-home"
+                accessibilityLabel="Go to home screen"
               />
             </View>
           </View>

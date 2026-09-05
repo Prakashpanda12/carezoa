@@ -1,6 +1,7 @@
-import React, { type ReactNode } from "react";
+import React, { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  AppState,
   RefreshControl,
   ScrollView,
   Text,
@@ -25,6 +26,7 @@ export function Button({
   icon,
   small = false,
   testID,
+  accessibilityLabel,
 }: {
   title: string;
   onPress?: () => void;
@@ -34,6 +36,7 @@ export function Button({
   icon?: keyof typeof Ionicons.glyphMap;
   small?: boolean;
   testID?: string;
+  accessibilityLabel?: string;
 }) {
   const styles: Record<string, string> = {
     primary: "bg-brand",
@@ -55,6 +58,9 @@ export function Button({
       onPress={onPress}
       disabled={disabled || loading}
       activeOpacity={0.85}
+      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
       className={cx(
         "flex-row items-center justify-center rounded-full",
         small ? "px-4 py-2" : "px-6 py-3.5",
@@ -355,6 +361,9 @@ export function SwitchRow({
     <TouchableOpacity
       onPress={() => !disabled && onChange(!value)}
       activeOpacity={0.8}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value, disabled: !!disabled }}
+      accessibilityLabel={label}
       className="flex-row items-center justify-between py-2.5"
     >
       <Text className="text-[14px] font-medium text-ink">{label}</Text>
@@ -368,5 +377,62 @@ export function SwitchRow({
         <View className="h-6 w-6 rounded-full bg-white shadow" />
       </View>
     </TouchableOpacity>
+  );
+}
+
+/**
+ * BUG-M09 fix: Lightweight offline banner.
+ * Uses AppState changes + periodic connectivity ping to detect offline state.
+ * No external dependency needed — uses a simple HEAD request to the API.
+ */
+export function OfflineBanner() {
+  const [offline, setOffline] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const checkOnline = async () => {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        await fetch("https://httpbin.org/get", {
+          method: "HEAD",
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        setOffline(false);
+      } catch {
+        setOffline(true);
+      }
+    };
+
+    // Check on app focus
+    const subscription = AppState.addEventListener("change", (nextState) => {
+      if (nextState === "active") checkOnline();
+    });
+
+    // Initial check
+    checkOnline();
+    // Periodic check every 30s
+    timerRef.current = setInterval(checkOnline, 30_000);
+
+    return () => {
+      subscription.remove();
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  if (!offline) return null;
+
+  return (
+    <View
+      className="flex-row items-center gap-2 bg-danger px-4 py-2"
+      accessibilityRole="alert"
+      accessibilityLabel="You appear to be offline. Some features may not work."
+    >
+      <Ionicons name="cloud-offline-outline" size={14} color="#fff" />
+      <Text className="flex-1 text-[12px] font-semibold text-white">
+        You appear to be offline. Some features may not work.
+      </Text>
+    </View>
   );
 }

@@ -29,17 +29,21 @@ export function Messages() {
   const booking = useBooking(id ?? "", 0);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
-  const [tick, setTick] = useState(Date.now());
-  const scrollRef = useRef<ScrollView>(null);
-
-  useEffect(() => {
-    const t = setInterval(() => setTick(Date.now()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
   const items = messages.data?.items ?? [];
-  const visible = items.filter((m) => +new Date(m.createdAt) <= tick);
-  const pending = items.find((m) => m.sender === "provider" && +new Date(m.createdAt) > tick);
+  // BUG-H04 fix: instead of a 1-second interval that causes re-renders every second,
+  // only schedule a single timeout for the next pending message's reveal time
+  const [revealTick, setRevealTick] = useState(Date.now());
+  useEffect(() => {
+    const now = Date.now();
+    const nextPending = items.find((m) => m.sender === "provider" && +new Date(m.createdAt) > now);
+    if (!nextPending) return;
+    const delay = Math.max(0, +new Date(nextPending.createdAt) - now + 100);
+    const timer = setTimeout(() => setRevealTick(Date.now()), delay);
+    return () => clearTimeout(timer);
+  }, [items]);
+
+  const visible = items.filter((m) => +new Date(m.createdAt) <= revealTick);
+  const pending = items.find((m) => m.sender === "provider" && +new Date(m.createdAt) > revealTick);
 
   const send = async () => {
     const body = draft.trim();

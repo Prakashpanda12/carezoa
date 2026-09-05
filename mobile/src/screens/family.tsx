@@ -25,6 +25,14 @@ import {
   cx,
 } from "../components/ui";
 
+// SEC-014 fix: mask phone number, showing only last 4 digits
+function maskPhone(phone: string): string {
+  if (phone.length < 6) return phone;
+  const visible = phone.slice(-4);
+  const masked = "•".repeat(Math.max(0, phone.length - 4));
+  return masked + visible;
+}
+
 function ScopeChips({ scope, t }: { scope: FamilyMember["accessScope"]; t: (k: string) => string }) {
   return (
     <View className="mt-2 flex-row flex-wrap gap-1.5">
@@ -139,7 +147,7 @@ export function FamilyMembers() {
               <Avatar name={m.name} size={44} />
               <View className="flex-1">
                 <Text className="text-[15px] font-bold text-ink">{m.name}</Text>
-                <Text className="text-[12px] text-soft">{m.relation} · {m.phone}</Text>
+                <Text className="text-[12px] text-soft">{m.relation} · {maskPhone(m.phone)}</Text>
               </View>
               <Chip
                 tone={m.inviteStatus === "active" ? "success" : m.inviteStatus === "pending" ? "warn" : "danger"}

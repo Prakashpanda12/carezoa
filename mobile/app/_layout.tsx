@@ -1,7 +1,7 @@
 import "../src/theme/globals.css";
 import "../src/i18n";
-import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, Text, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -10,12 +10,15 @@ import { useAuth } from "../src/store/auth";
 import { applySavedLanguage } from "../src/i18n";
 import { api } from "../src/api/client";
 import { requestNotificationPermissions, getExpoPushToken } from "../src/utils/notifications";
+import { OfflineBanner } from "../src/components/ui";
 
 export default function RootLayout() {
   const [queryClient] = useState(makeQueryClient);
   const router = useRouter();
   const segments = useSegments();
   const { hydrated, token, hydrate, setPatient } = useAuth();
+  // BUG-H06 fix: track whether we've done the initial auth redirect to prevent flash
+  const initialRedirectDone = useRef(false);
 
   // boot: restore token from SecureStore, language from AsyncStorage,
   // and request push permissions.
@@ -42,21 +45,29 @@ export default function RootLayout() {
       .catch(() => {});
   }, [token, setPatient]);
 
-  // auth guard
+  // BUG-H06 fix: auth guard with initial redirect tracking to prevent flash
   useEffect(() => {
     if (!hydrated) return;
     const inAuthGroup = segments[0] === "(auth)";
     if (!token && !inAuthGroup) {
       router.replace("/(auth)/signup");
+      initialRedirectDone.current = true;
     } else if (token && inAuthGroup) {
       router.replace("/(tabs)/home");
+      initialRedirectDone.current = true;
+    } else {
+      initialRedirectDone.current = true;
     }
   }, [hydrated, token, segments, router]);
 
-  if (!hydrated) {
+  // BUG-H06 fix: show branded splash while hydrating + initial redirect
+  if (!hydrated || !initialRedirectDone.current) {
     return (
       <View className="flex-1 items-center justify-center bg-paper">
-        <ActivityIndicator size="large" color="#0E7C7B" />
+        <View className="h-20 w-20 items-center justify-center rounded-full" style={{ backgroundColor: "rgba(14,124,123,0.12)" }}>
+          <Text className="text-[24px] font-bold" style={{ color: "#0E7C7B" }}>C</Text>
+        </View>
+        <ActivityIndicator size="small" color="#0E7C7B" style={{ marginTop: 16 }} />
       </View>
     );
   }
@@ -64,6 +75,8 @@ export default function RootLayout() {
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
+      {/* BUG-M09 fix: offline indicator */}
+      <OfflineBanner />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />

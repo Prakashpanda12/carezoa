@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import MapView, { Circle, Marker } from "react-native-maps";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useProvider } from "../api/hooks";
@@ -20,6 +19,7 @@ import {
   ProviderPhoto,
   ProviderRatingSummary,
   ReviewRow,
+  SafeMapView,
 } from "../components/provider";
 
 export function ProviderProfile() {
@@ -79,37 +79,8 @@ export function ProviderProfile() {
           </View>
         </View>
 
-        {/* coverage map */}
-        <View className="mx-5 mt-5 overflow-hidden rounded-xl3 border border-line">
-          <MapView
-            style={{ height: 150 }}
-            initialRegion={{
-              latitude: p.location.lat,
-              longitude: p.location.lng,
-              latitudeDelta: 0.16,
-              longitudeDelta: 0.16,
-            }}
-            scrollEnabled={false}
-            zoomEnabled={false}
-            pitchEnabled={false}
-            rotateEnabled={false}
-          >
-            <Circle
-              center={p.location}
-              radius={p.coverageKm * 1000}
-              fillColor="rgba(14,124,123,0.10)"
-              strokeColor="rgba(14,124,123,0.4)"
-            />
-            <Marker coordinate={p.location} />
-          </MapView>
-          <View className="flex-row items-center gap-2 bg-card px-4 py-2.5">
-            <Ionicons name="navigate-outline" size={13} color="#0E7C7B" />
-            <Text className="text-[12px] font-semibold text-soft">
-              {t("provider.coverage", { km: p.coverageKm, city: p.city })}
-              {p.distanceKm != null ? ` · ${t("provider.away", { km: p.distanceKm })}` : ""}
-            </Text>
-          </View>
-        </View>
+        {/* BUG-H02 fix: SafeMapView wraps MapView with error boundary */}
+        <SafeMapView location={p.location} coverageKm={p.coverageKm} city={p.city} distanceKm={p.distanceKm} t={t} />
 
         {/* about */}
         <View className="mt-5 px-5">
@@ -139,6 +110,9 @@ export function ProviderProfile() {
                   "mb-2 flex-row items-center justify-between rounded-2xl border p-4",
                   active ? "border-brand bg-brand-soft" : "border-line bg-card",
                 )}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${s.name}, ${durationLabel(s.durationMin)}, ${inr(s.basePriceInr)}`}
               >
                 <View>
                   <Text className={cx("text-[14px] font-bold", active ? "text-brand-dark" : "text-ink")}>
@@ -183,7 +157,7 @@ export function ProviderProfile() {
                 <Text className="text-[12px] font-medium text-soft"> {t("common.perVisit")}</Text>
               </Text>
             </View>
-            <Button title={t("common.bookNow")} icon="calendar" onPress={startBooking} testID="book-now" />
+            <Button title={t("common.bookNow")} icon="calendar" onPress={startBooking} testID="book-now" accessibilityLabel={`Book ${selected.name} for ${inr(selected.basePriceInr)}`} />
           </View>
         </View>
       )}

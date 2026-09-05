@@ -43,6 +43,17 @@ export function PaymentMethods() {
     }
   };
 
+  // BUG-M07 fix: mask card number while typing (show only last 4 digits)
+  const formatCardInput = (text: string) => {
+    if (mode !== "card") return text;
+    const digits = text.replace(/\D/g, "");
+    // Format as groups of 4: 1234 5678 9012 3456
+    const groups = digits.match(/.{1,4}/g);
+    return groups ? groups.join(" ") : "";
+  };
+
+  const displayValue = mode === "card" ? formatCardInput(detail) : detail;
+
   const remove = (id: number, label: string) => {
     Alert.alert(t("common.delete"), label, [
       { text: t("common.cancel"), style: "cancel" },
@@ -103,15 +114,21 @@ export function PaymentMethods() {
         </View>
         <View className="mt-3 flex-row items-center gap-2">
           <TextInput
-            value={detail}
-            onChangeText={setDetail}
-            placeholder={mode === "upi" ? t("payMethods.addUpiPlaceholder") : t("payMethods.addCardPlaceholder")}
+            value={displayValue}
+            onChangeText={(text) => {
+              // BUG-M07 fix: store raw digits for card, full text for UPI
+              setDetail(mode === "card" ? text.replace(/\D/g, "") : text);
+            }}
+            placeholder={mode === "upi" ? t("payMethods.addUpiPlaceholder") : "1234 5678 9012 3456"}
             placeholderTextColor="#9AA5A2"
             keyboardType={mode === "card" ? "number-pad" : "default"}
+            maxLength={mode === "card" ? 19 : 50} // 16 digits + 3 spaces for card
             className="flex-1 rounded-2xl border border-line bg-card px-4 py-3 text-[14px] text-ink"
             testID="add-method-input"
+            accessibilityLabel={mode === "upi" ? "UPI ID input" : "Card number input"}
+            secureTextEntry={false}
           />
-          <Button title={t("payMethods.add")} small loading={busy} onPress={add} />
+          <Button title={t("payMethods.add")} small loading={busy} onPress={add} accessibilityLabel="Add payment method" />
         </View>
       </Card>
     </Screen>

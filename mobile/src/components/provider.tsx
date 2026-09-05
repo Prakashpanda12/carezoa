@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { ProviderSummary, Service } from "../types/api";
@@ -137,3 +137,103 @@ export function ReviewRow({
     </View>
   );
 }
+
+/**
+ * BUG-H02 fix: SafeMapView wraps MapView with error handling to prevent
+ * crashes on Android devices without Google Play Services (Huawei, custom ROMs).
+ * Falls back to a static coverage card if MapView fails to load.
+ */
+export function SafeMapView({
+  location,
+  coverageKm,
+  city,
+  distanceKm,
+  t,
+}: {
+  location: { lat: number; lng: number };
+  coverageKm: number;
+  city: string;
+  distanceKm: number | null;
+  t: (k: string, opts?: Record<string, unknown>) => string;
+}) {
+  const [mapError, setMapError] = useState(false);
+
+  if (mapError) {
+    // Fallback: static coverage card without MapView
+    return (
+      <View className="mx-5 mt-5 overflow-hidden rounded-xl3 border border-line bg-card p-4">
+        <View className="flex-row items-center gap-3">
+          <View className="h-12 w-12 items-center justify-center rounded-xl bg-brand-soft">
+            <Ionicons name="map" size={22} color="#0E7C7B" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-[14px] font-bold text-ink">{city}</Text>
+            <Text className="text-[12px] text-soft">
+              {t("provider.coverage", { km: coverageKm, city })}
+              {distanceKm != null ? ` · ${t("provider.away", { km: distanceKm })}` : ""}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // Lazy-load MapView to catch errors on devices without GMS
+  try {
+    const MapView = require("react-native-maps").default;
+    const { Circle, Marker } = require("react-native-maps");
+
+    return (
+      <View className="mx-5 mt-5 overflow-hidden rounded-xl3 border border-line">
+        <MapView
+          style={{ height: 150 }}
+          initialRegion={{
+            latitude: location.lat,
+            longitude: location.lng,
+            latitudeDelta: 0.16,
+            longitudeDelta: 0.16,
+          }}
+          scrollEnabled={false}
+          zoomEnabled={false}
+          pitchEnabled={false}
+          rotateEnabled={false}
+          onError={() => setMapError(true)}
+          accessibilityLabel={`Coverage map showing ${coverageKm}km radius around ${city}`}
+        >
+          <Circle
+            center={location}
+            radius={coverageKm * 1000}
+            fillColor="rgba(14,124,123,0.10)"
+            strokeColor="rgba(14,124,123,0.4)"
+          />
+          <Marker coordinate={location} />
+        </MapView>
+        <View className="flex-row items-center gap-2 bg-card px-4 py-2.5">
+          <Ionicons name="navigate-outline" size={13} color="#0E7C7B" />
+          <Text className="text-[12px] font-semibold text-soft">
+            {t("provider.coverage", { km: coverageKm, city })}
+            {distanceKm != null ? ` · ${t("provider.away", { km: distanceKm })}` : ""}
+          </Text>
+        </View>
+      </View>
+    );
+  } catch {
+    // react-native-maps not available at all
+    return (
+      <View className="mx-5 mt-5 overflow-hidden rounded-xl3 border border-line bg-card p-4">
+        <View className="flex-row items-center gap-3">
+          <View className="h-12 w-12 items-center justify-center rounded-xl bg-brand-soft">
+            <Ionicons name="map" size={22} color="#0E7C7B" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-[14px] font-bold text-ink">{city}</Text>
+            <Text className="text-[12px] text-soft">
+              {t("provider.coverage", { km: coverageKm, city })}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+}
+

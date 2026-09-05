@@ -57,6 +57,7 @@
     "noUpcoming": "No visits scheduled — book care in under a minute.",
     "providersNear": "Verified providers near you",
     "plans": "Care plans for ongoing support",
+    "plansSubtitle": "Save up to 20% with monthly plans",
     "viewingAs": "Viewing as {{name}}"
   },
   "search": { "title": "Find care", "clearSearch": "Clear" },
