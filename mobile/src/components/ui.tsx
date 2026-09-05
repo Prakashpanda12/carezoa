@@ -95,31 +95,36 @@ interface FieldProps extends TextInputProps {
   icon?: keyof typeof Ionicons.glyphMap;
 }
 
-export function Field({ label, error, icon, ...input }: FieldProps) {
-  return (
-    <View className="mb-4">
-      {label && (
-        <Text className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-faint">
-          {label}
-        </Text>
-      )}
-      <View
-        className={cx(
-          "flex-row items-center rounded-2xl border bg-card px-4",
-          error ? "border-danger" : "border-line",
+export const Field = React.forwardRef<TextInput, FieldProps>(
+  ({ label, error, icon, ...input }, ref) => {
+    return (
+      <View className="mb-4">
+        {label && (
+          <Text className="mb-1.5 text-[11px] font-bold uppercase tracking-widest text-faint">
+            {label}
+          </Text>
         )}
-      >
-        {icon && <Ionicons name={icon} size={16} color="#9AA5A2" style={{ marginRight: 8 }} />}
-        <TextInput
-          placeholderTextColor="#9AA5A2"
-          className="flex-1 py-3 text-[15px] text-ink"
-          {...input}
-        />
+        <View
+          className={cx(
+            "flex-row items-center rounded-2xl border bg-card px-4",
+            error ? "border-danger" : "border-line",
+          )}
+        >
+          {icon && <Ionicons name={icon} size={16} color="#9AA5A2" style={{ marginRight: 8 }} />}
+          <TextInput
+            ref={ref}
+            placeholderTextColor="#9AA5A2"
+            className="flex-1 py-3 text-[15px] text-ink"
+            {...input}
+          />
+        </View>
+        {error && <Text className="mt-1 text-[12px] font-medium text-danger">{error}</Text>}
       </View>
-      {error && <Text className="mt-1 text-[12px] font-medium text-danger">{error}</Text>}
-    </View>
-  );
-}
+    );
+  }
+);
+
+Field.displayName = "Field";
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
   return (

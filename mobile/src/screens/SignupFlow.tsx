@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   KeyboardAvoidingView,
   Linking,
@@ -28,6 +28,8 @@ import { Button, Field, Card, cx } from "../../components/ui";
 
 type SignupStep = "welcome" | "phone" | "otp" | "profile" | "terms" | "success";
 
+const STEPS: SignupStep[] = ["welcome", "phone", "otp", "profile", "terms", "success"];
+
 export function SignupFlow() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -39,6 +41,7 @@ export function SignupFlow() {
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [serverError, setServerError] = useState("");
+  const [loadingMessage, setLoadingMessage] = useState("");
 
   const phoneForm = useForm<PhoneForm>({
     resolver: zodResolver(phoneSchema),
@@ -75,23 +78,33 @@ export function SignupFlow() {
   const verifyOtp = otpForm.handleSubmit(async (v) => {
     setBusy(true);
     setServerError("");
+    setLoadingMessage("Verifying your code...");
     try {
       const res = await api.otpVerify(phone.replace(/[\s-]/g, ""), v.code);
-      // Fetch profile right away so we never have a session without patient data
-      let patient = null;
+      
+      // Set session first with null patient
+      setLoadingMessage("Setting up your account...");
+      await setSession(res.access_token, null);
+      
+      // Small delay to ensure session is fully established
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Now fetch profile
+      setLoadingMessage("Loading your profile...");
       try {
-        // setSession first with null so token is set for subsequent API calls
-        await setSession(res.access_token, null);
-        patient = await api.getProfile();
-        setPatient(patient);
-      } catch {
+        const profile = await api.getProfile();
+        setPatient(profile);
+      } catch (err) {
         // If profile fetch fails for a new user, that's OK — they'll fill it in the next step
+        console.warn("Profile fetch failed, user will complete profile setup:", err);
       }
+      
       setStep("profile");
     } catch (e) {
       setServerError(e instanceof Error ? e.message : "Verification failed");
     } finally {
       setBusy(false);
+      setLoadingMessage("");
     }
   });
 
@@ -122,11 +135,17 @@ export function SignupFlow() {
   };
 
   const goBack = () => {
-    const steps: SignupStep[] = ["welcome", "phone", "otp", "profile", "terms", "success"];
-    const currentIndex = steps.indexOf(step);
+    const currentIndex = STEPS.indexOf(step);
     if (currentIndex > 0) {
-      setStep(steps[currentIndex - 1]);
+      const prevStep = STEPS[currentIndex - 1];
+      setStep(prevStep);
       setServerError("");
+      
+      // Clear phone form when going back from OTP to phone step
+      if (step === "otp" && prevStep === "phone") {
+        phoneForm.reset({ phone: "+91" });
+        setPhone("");
+      }
     }
   };
 
@@ -153,6 +172,22 @@ export function SignupFlow() {
           <Text className="ml-3 text-[16px] font-semibold text-ink">
             {t("signup.createAccount")}
           </Text>
+          {/* Progress indicator */}
+          <View className="ml-auto">
+            <Text className="text-[12px] text-soft">
+              Step {STEPS.indexOf(step)} of {STEPS.length - 2}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Loading overlay */}
+      {loadingMessage && (
+        <View className="absolute inset-0 z-50 items-center justify-center bg-paper/90">
+          <View className="items-center rounded-2xl bg-card p-6 shadow-lg">
+            <View className="mb-3 h-8 w-8 animate-spin rounded-full border-4 border-brand border-t-transparent" />
+            <Text className="text-[14px] font-medium text-ink">{loadingMessage}</Text>
+          </View>
         </View>
       )}
 
@@ -267,6 +302,7 @@ export function SignupFlow() {
                     error={otpForm.formState.errors.code?.message}
                     testID="signup-otp-input"
                     accessibilityLabel="6-digit verification code"
+                    autoFocus
                   />
                 )}
               />
@@ -289,10 +325,10 @@ export function SignupFlow() {
                 }}
                 className="mt-4 items-center"
                 accessibilityRole="button"
-                accessibilityLabel="Go back to change phone number or resend code"
+                accessibilityLabel="Go back to change phone number"
               >
                 <Text className="text-[13px] font-semibold text-brand">
-                  {t("auth.resend")}
+                  Use a different phone number
                 </Text>
               </TouchableOpacity>
             </View>
@@ -439,7 +475,11 @@ export function SignupFlow() {
             </Text>
 
             <Card className="mt-6">
-              <ScrollView style={{ maxHeight: 300 }}>
+              <ScrollView 
+                style={{ maxHeight: 300 }}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator
+              >
                 <Text className="text-[13px] leading-relaxed text-soft">
                   {t("signup.termsContent")}
                 </Text>
