@@ -5,21 +5,11 @@ import { ActivityIndicator, View } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { QueryClientProvider } from "@tanstack/react-query";
-import * as Notifications from "expo-notifications";
 import { makeQueryClient } from "../src/api/hooks";
 import { useAuth } from "../src/store/auth";
 import { applySavedLanguage } from "../src/i18n";
 import { api } from "../src/api/client";
-
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+import { requestNotificationPermissions, getExpoPushToken } from "../src/utils/notifications";
 
 export default function RootLayout() {
   const [queryClient] = useState(makeQueryClient);
@@ -32,8 +22,14 @@ export default function RootLayout() {
   useEffect(() => {
     void hydrate();
     void applySavedLanguage();
-    Notifications.requestPermissionsAsync()
-      .then(() => Notifications.getExpoPushTokenAsync())
+    // Request notification permissions (safe for Expo Go)
+    requestNotificationPermissions()
+      .then((granted) => {
+        if (granted) {
+          return getExpoPushToken();
+        }
+        return null;
+      })
       .catch(() => null);
   }, [hydrate]);
 

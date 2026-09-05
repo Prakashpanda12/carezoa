@@ -21,10 +21,6 @@ export default (): ExpoConfig => ({
       "expo-notifications",
       { color: "#0E7C7B" },
     ],
-    [
-      "react-native-maps",
-      { androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_KEY ?? "" },
-    ],
   ],
   experiments: { typedRoutes: true },
   ios: {
@@ -39,6 +35,11 @@ export default (): ExpoConfig => ({
     package: "com.carezoa.patient",
     edgeToEdgeEnabled: true,
     permissions: ["POST_NOTIFICATIONS", "ACCESS_COARSE_LOCATION"],
+    config: {
+      googleMaps: {
+        apiKey: process.env.GOOGLE_MAPS_ANDROID_KEY ?? "",
+      },
+    },
   },
   extra: {
     apiUrl: process.env.EXPO_PUBLIC_API_URL ?? null,

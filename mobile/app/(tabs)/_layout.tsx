@@ -2,8 +2,8 @@ import React, { useEffect, useRef } from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import * as Notifications from "expo-notifications";
 import { useBookings } from "../../src/api/hooks";
+import { scheduleNotification } from "../../src/utils/notifications";
 
 /**
  * Watches visit statuses (polled) and raises local notifications for the
@@ -26,7 +26,8 @@ function useVisitNotifications() {
         };
         const msg = messages[b.status];
         if (msg) {
-          Notifications.scheduleNotificationAsync({ content: msg, trigger: null }).catch(() => {});
+          // Use safe wrapper - will gracefully skip in Expo Go
+          scheduleNotification(msg.title, msg.body).catch(() => {});
         }
       }
       prev.current[b.id] = b.status;

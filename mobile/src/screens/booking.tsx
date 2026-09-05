@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { WebView, type WebViewNavigation } from "react-native-webview";
-import * as Notifications from "expo-notifications";
+import { scheduleNotification } from "../utils/notifications";
 import { absoluteUrl, api } from "../api/client";
 import { useBooking, usePaymentMethods } from "../api/hooks";
 import { useBookingDraft, draftToStartsAt } from "../store/bookingDraft";
@@ -363,15 +363,11 @@ export function PaymentSuccess() {
 
   useEffect(() => {
     // Local confirmation notification (push-ready channel in production)
-    Notifications.scheduleNotificationAsync({
-      content: {
-        title: t("payment.successTitle"),
-        body: booking.data
-          ? `${booking.data.service?.name} · ${booking.data.provider?.name} — ${dayLabel(booking.data.startsAt)}, ${timeOf(booking.data.startsAt)}`
-          : t("payment.successBody"),
-      },
-      trigger: null,
-    }).catch(() => {});
+    const title = t("payment.successTitle");
+    const body = booking.data
+      ? `${booking.data.service?.name} · ${booking.data.provider?.name} — ${dayLabel(booking.data.startsAt)}, ${timeOf(booking.data.startsAt)}`
+      : t("payment.successBody");
+    scheduleNotification(title, body).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [booking.data]);
 
