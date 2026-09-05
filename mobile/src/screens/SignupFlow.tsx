@@ -14,8 +14,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { api } from "../../api/client";
-import { useAuth } from "../../store/auth";
+import { api } from "../api/client";
+import { useAuth } from "../store/auth";
 import {
   phoneSchema,
   otpSchema,
@@ -23,8 +23,8 @@ import {
   type PhoneForm,
   type OtpForm,
   type ProfileSetupForm,
-} from "../../utils/schemas";
-import { Button, Field, Card, cx } from "../../components/ui";
+} from "../utils/schemas";
+import { Button, Field, Card, cx } from "../components/ui";
 
 type SignupStep = "welcome" | "phone" | "otp" | "profile" | "terms" | "success";
 
