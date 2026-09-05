@@ -109,9 +109,9 @@ export const api = {
       "/auth/otp/verify",
       { method: "POST", body: JSON.stringify({ phone, code }) },
     ),
-  getProfile: () => request<PatientProfile>("/profile"),
+  getProfile: () => request<PatientProfile>("/patients/me"),
   patchProfile: (patch: Partial<PatientProfile>) =>
-    request<PatientProfile>("/profile", { method: "PATCH", body: JSON.stringify(patch) }),
+    request<PatientProfile>("/patients/me", { method: "PATCH", body: JSON.stringify(patch) }),
 
   // catalog
   getServices: () => request<{ categories: string[]; items: Service[] }>("/services"),
