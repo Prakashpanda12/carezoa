@@ -2,18 +2,19 @@
 FROM python:3.12-slim AS builder
 ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /build
-RUN pip install hatchling
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 COPY pyproject.toml README.md ./
 COPY app ./app
-RUN pip wheel --no-deps --wheel-dir /wheels hatchling 2>/dev/null || true \
- && pip install --no-deps --target /install .
+RUN pip install .
 
 # ---- runtime ----
 FROM python:3.12-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN groupadd -r carezoa && useradd -r -g carezoa carezoa
 WORKDIR /srv
-COPY --from=builder /install /usr/local/lib/python3.12/site-packages
+COPY --from=builder /opt/venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
 COPY --from=builder /build/app ./app
 COPY alembic.ini ./
 USER carezoa

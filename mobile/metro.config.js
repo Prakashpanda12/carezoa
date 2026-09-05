@@ -32,4 +32,26 @@ try {
   console.warn("NativeWind metro plugin not available, skipping Tailwind integration:", e.message);
 }
 
+// Redirect native-only modules to web stubs when bundling for web
+const nativeOnlyWebShims = {
+  "react-native-maps": path.resolve(__dirname, "src/shims/react-native-maps.web.js"),
+};
+
+const originalResolveRequest = finalConfig.resolver?.resolveRequest;
+finalConfig.resolver = {
+  ...finalConfig.resolver,
+  resolveRequest: (context, moduleName, platform) => {
+    if (platform === "web" && nativeOnlyWebShims[moduleName]) {
+      return {
+        filePath: nativeOnlyWebShims[moduleName],
+        type: "sourceFile",
+      };
+    }
+    if (originalResolveRequest) {
+      return originalResolveRequest(context, moduleName, platform);
+    }
+    return context.resolveRequest(context, moduleName, platform);
+  },
+};
+
 module.exports = finalConfig;

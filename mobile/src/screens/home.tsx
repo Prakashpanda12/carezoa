@@ -29,7 +29,7 @@ export function Home() {
   const upcoming = useBookings("upcoming");
 
   const firstName = (patient?.name ?? "there").split(" ")[0] ?? "there";
-  const nextVisit = upcoming.data?.items[0];
+  const nextVisit = upcoming.data?.items?.[0];
 
   if (services.isLoading) return <LoadingState label={t("common.loading")} />;
   if (services.isError)
@@ -135,7 +135,7 @@ export function Home() {
           <Text className="text-[12px] font-bold text-brand">{t("common.seeAll")}</Text>
         </TouchableOpacity>
       </View>
-      {providers.data?.items.slice(0, 3).map((p) => (
+      {providers?.data?.items?.slice(0, 3)?.map((p) => (
         <ProviderCard key={p.id} provider={p} onPress={() => router.push(`/provider/${p.id}`)} />
       ))}
 

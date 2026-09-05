@@ -10,8 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import apiClient from '@/lib/api';
 
+import { useNavigate } from 'react-router-dom';
+
 export function LoginPage() {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
@@ -40,6 +43,7 @@ export function LoginPage() {
     setError('');
     try {
       await login(phone, otp);
+      navigate('/');
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Verification failed');
     } finally {
