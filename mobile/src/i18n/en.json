@@ -31,6 +31,24 @@
     "addressLabel": "Care address",
     "finishSetup": "Finish setup"
   },
+  "signup": {
+    "createAccount": "Create Account",
+    "welcomeTitle": "Welcome to Carezoa",
+    "welcomeBody": "Quality healthcare at your doorstep. Book verified nurses, physiotherapists, and caregivers for your loved ones.",
+    "getStarted": "Create Account",
+    "alreadyHaveAccount": "Already have an account? Sign in",
+    "phoneTitle": "Let's get started",
+    "phoneBody": "Enter your phone number to create your account. We'll send you a verification code.",
+    "profileBody": "Help us personalize your experience. This information will be used for booking visits.",
+    "termsTitle": "Terms & Conditions",
+    "termsBody": "Please review and accept our terms to complete your registration.",
+    "termsContent": "By creating an account, you agree to our Terms of Service and Privacy Policy.\n\n1. You agree to provide accurate information during registration.\n2. You understand that Carezoa connects you with verified healthcare providers.\n3. You acknowledge that all bookings are subject to provider availability.\n4. You agree to our payment terms and cancellation policies.\n5. You consent to receive notifications about your bookings and care updates.\n6. You understand that Carezoa is not liable for the quality of care provided by independent providers.\n7. You agree to use the platform responsibly and not for any illegal activities.\n\nFor full terms, visit our website.",
+    "acceptTerms": "I accept the Terms of Service and Privacy Policy",
+    "completeSignup": "Complete Registration",
+    "successTitle": "Welcome Aboard!",
+    "successBody": "Your account has been created successfully. You're now ready to book quality healthcare services for your loved ones.",
+    "goToHome": "Get Started"
+  },
   "home": {
     "greeting": "Hello, {{name}}",
     "searchPlaceholder": "Search nurses, elder care, physio…",

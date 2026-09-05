@@ -47,7 +47,7 @@ export default function RootLayout() {
     if (!hydrated) return;
     const inAuthGroup = segments[0] === "(auth)";
     if (!token && !inAuthGroup) {
-      router.replace("/(auth)/onboarding");
+      router.replace("/(auth)/signup");
     } else if (token && inAuthGroup) {
       router.replace("/(tabs)/home");
     }
