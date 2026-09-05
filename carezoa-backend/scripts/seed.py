@@ -74,6 +74,18 @@ async def seed() -> None:
             print("already seeded")
             return
 
+        # Create admin user
+        admin_user = User(phone="+919999999999", role=Role.ADMIN, mfa_enabled=True)
+        s.add(admin_user)
+        
+        # Create support agent user
+        support_user = User(phone="+919999999998", role=Role.SUPPORT_AGENT, mfa_enabled=False)
+        s.add(support_user)
+        
+        await s.flush()
+        print(f"Created admin user: {admin_user.phone}")
+        print(f"Created support agent: {support_user.phone}")
+
         services = [
             Service(category=c, name=n, description=d, duration_min=du, base_price_inr=p, icon=i)
             for c, n, d, du, p, i in SERVICES
@@ -254,11 +266,18 @@ async def seed() -> None:
                 entity_type="seed",
                 entity_id=0,
                 action="seed.completed",
-                meta={"nurses": len(NURSES), "patients": len(PATIENTS)},
+                meta={
+                    "nurses": len(NURSES),
+                    "patients": len(PATIENTS),
+                    "admin_phone": "+919999999999",
+                    "support_phone": "+919999999998",
+                },
             )
         )
         await s.commit()
         print("seeded: 10 nurses, 10 patients, 9 bookings across every state")
+        print("admin login: +919999999999 (OTP: 123456 in dev)")
+        print("support login: +919999999998 (OTP: 123456 in dev)")
 
 
 if __name__ == "__main__":
